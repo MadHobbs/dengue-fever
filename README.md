@@ -27,3 +27,17 @@ End Product: Describe what you hope to deliver as a final product. Will it be a 
 Our end product will include a Shiny app to display predicted cases (using our model) based on user-given input. Also including relevant interactive visualizations. 
 Reach goal: connect to live data from San Juan and Iquitos and create API to that live data source, using our model to predict Dengue cases. 
 
+Update
+
+Have you already collected, or do you have access to, all of the data that you will need in order to complete your project? If not, please estimate the percentage of the data that you have, describe any issues that you are having, and what your plan is for getting the rest of the data.
+---> Yes! We have the data.
+
+What is the single biggest unresolved issue you are having? Please describe it briefly, and what your plan is for resolving this issue.
+---> Which model type will we use? We will come together and discuss what models make more sense for our data (do we suspect a linear relationship? Do we expect a nonlinear relationship?). In that discussion we'll refer to literature we've each read about other people predicting dengue cases (or other diseases) from environmental variables. We'll come up with a handful of models to try that way. Then, we can try a few different models and see which performs best.
+
+What are the elements from outside of the course, if any, that you plan to incorporate into your project?
+---> Jenn's background in biology can help us reason about the biological forces at play. We'll both be reading as much scientific material as we can too to give us context and incorporate domain knowledge into our model and its interpretation.
+
+---> Shiny App (kind of outside the course, kind of inside it).
+
+---> How to connect to an API!
