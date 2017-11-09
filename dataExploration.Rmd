@@ -5,7 +5,7 @@ date: "November 8, 2017"
 output: pdf_document
 ---
 
-```{r loadData}
+```{r loadData, echo = F , warning=FALSE}
 
 require(dplyr)
 require(ggplot2)
@@ -20,7 +20,7 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 ```
 
 
-```{r somePlots}
+```{r somePlots , echo = F , warning=FALSE}
 
 enviroPredNames <- colnames(TrainFull)[6:25]
 
@@ -42,7 +42,7 @@ ggplot(data = TrainFull) + geom_point(aes(x=station_precip_mm, y=total_cases)) +
 
 ```
 
-```{r seasonalAnalysis}
+```{r seasonalAnalysis , echo = F, warning=FALSE}
 
 #there are 13 weeks in a season
 
@@ -69,6 +69,10 @@ for (i in 1:length(TrainFullTest$weekofyear)){
 TrainFullTest <- cbind(TrainFullTest, season)
 
 ggplot(data = TrainFullTest) + geom_point(aes(x=season, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=weekofyear, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=week_start_date, y=total_cases)) + facet_grid(city~.)
 
 
 ```
