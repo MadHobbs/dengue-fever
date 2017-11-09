@@ -1,0 +1,74 @@
+---
+title: "Data Exlporation"
+author: "Jenn Havens"
+date: "November 8, 2017"
+output: pdf_document
+---
+
+```{r loadData}
+
+require(dplyr)
+require(ggplot2)
+
+TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
+
+TrainPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Features.csv")
+TrainResp <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Labels.csv")
+
+TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"))
+
+```
+
+
+```{r somePlots}
+
+enviroPredNames <- colnames(TrainFull)[6:25]
+
+
+
+ggplot(data = TrainFull) + geom_point(aes(x=precipitation_amt_mm, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_air_temp_k, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_precip_amt_kg_per_m2, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_tdtr_k, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=station_avg_temp_c, y=total_cases)) + facet_grid(city~.)
+
+
+ggplot(data = TrainFull) + geom_point(aes(x=station_precip_mm, y=total_cases)) + facet_grid(city~.)
+
+
+```
+
+```{r seasonalAnalysis}
+
+#there are 13 weeks in a season
+
+findSeason <- function(week){
+  if (week < 10){
+    return(1)
+  } else if (week < 20){
+    return(2)
+  } else if (week < 31){
+    return(3)
+  } else {
+    return(4)
+  }
+}
+
+
+TrainFullTest <- TrainFull
+
+
+season <- c()
+for (i in 1:length(TrainFullTest$weekofyear)){
+  season <- c(season, findSeason(TrainFullTest$weekofyear[i]))
+}
+TrainFullTest <- cbind(TrainFullTest, season)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=season, y=total_cases)) + facet_grid(city~.)
+
+
+```
