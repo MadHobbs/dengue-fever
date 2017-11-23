@@ -41,3 +41,5 @@ What are the elements from outside of the course, if any, that you plan to incor
 ---> Shiny App (kind of outside the course, kind of inside it).
 
 ---> How to connect to an API!
+
+You all seem to be in great shape.  Keep me posted and let me know if/when you have any questions.  Thanks for the update!
