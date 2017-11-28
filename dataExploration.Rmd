@@ -17,7 +17,21 @@ TrainResp <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Labels
 
 TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"))
 
+TrainFull <- TrainFull %>% na.omit()
+
+require(rpart)
+require(caret)
 ```
+
+```{r}
+sd(TrainFull$total_cases)
+
+dengue.rf.train <- train(total_cases ~ ., data = TrainFull, method = "rf", trControl = trainControl(method = "oob"), ntree = 100, tuneGrid = data.frame(mtry = 1:24), importance = TRUE)
+
+varImpPlot(dengue.rf.train$finalModel)
+```
+
+
 
 
 ```{r somePlots , echo = F , warning=FALSE}
