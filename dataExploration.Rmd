@@ -7,6 +7,9 @@ output: pdf_document
 
 ```{r loadData, echo = F , warning=FALSE, include=FALSE}
 
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE, 
+                      fig.width=7, fig.height=4, fig.align = "center")
+
 require(dplyr)
 require(ggplot2)
 
@@ -126,7 +129,7 @@ They found significant association between three month lag and prediciting dengu
 ```{r}
 precip_lag <- c()
 
-sj_precip <- data_for_model %>% filter(city == "sj") %>% select(station_precip_mm)
+sj_precip <- TrainFull_noNA %>% filter(city == "sj") %>% select(station_precip_mm)
 sj_precip <- sj_precip$station_precip_mm
 
 index = 12
@@ -148,14 +151,14 @@ precip_lag <- c(mean(sj_precip[1:2]), precip_lag)
 precip_lag <- c(mean(sj_precip[1]), precip_lag)
 precip_lag <- c(mean(sj_precip[1]), precip_lag)
 
-sj_data_for_model <- data_for_model %>% filter(city == "sj") %>% mutate(precip_lag = precip_lag)
+sj_data_for_model <- TrainFull_noNA %>% filter(city == "sj") %>% mutate(precip_lag = precip_lag)
 ```
 
 
 ```{r}
 iq_precip_lag <- c()
 
-iq_precip <- data_for_model %>% filter(city == "iq") %>% select(station_precip_mm)
+iq_precip <- TrainFull_noNA %>% filter(city == "iq") %>% select(station_precip_mm)
 iq_precip <- iq_precip$station_precip_mm
 
 index = 12
@@ -177,19 +180,20 @@ iq_precip_lag <- c(mean(iq_precip[1:2]), iq_precip_lag)
 iq_precip_lag <- c(mean(iq_precip[1]), iq_precip_lag)
 iq_precip_lag <- c(mean(iq_precip[1]), iq_precip_lag)
 
-iq_data_for_model <- data_for_model %>% filter(city == "iq") %>% mutate(precip_lag = iq_precip_lag)
+iq_data_for_model <- TrainFull_noNA %>% filter(city == "iq") %>% mutate(precip_lag = iq_precip_lag)
 ```
 
 ```{r}
 # connect the precipitation lags for both cities
 precip_lag <- c(precip_lag, iq_precip_lag)
+TrainFull_noNA <- TrainFull_noNA %>% mutate(precip_lag = precip_lag)
 ```
 
 
 ## Building a Model
 
 ```{r}
-data_for_model <- TrainFull %>% select(city, year, weekofyear, total_cases, station_precip_mm, station_avg_temp_c)
+data_for_model <- TrainFull_noNA %>% select(total_cases, station_precip_mm, station_avg_temp_c, precip_lag, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, reanalysis_relative_humidity_percent)
 ```
 
 The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
@@ -210,10 +214,22 @@ RMSE <- function(error)
 }
 ```
 
+```{r}
+test <- sample_n(data_for_model, length(data_for_model$total_cases) * 0.1)
+train <- anti_join(data_for_model, test)
+
+model <- train(total_cases ~ ., data = train, method = "rf", trControl = trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:8), importance = TRUE)
+
+preds <- predict(model, test)
+MAE(test$total_cases - preds)
+RMSE(test$total_cases - preds)
+
+varImp(model)
+```
+
+Just San Juan data:
 
 ```{r}
-
-
 # we should remove the san juan data for which we don't have true precip or temp lag
 sj_data_for_model <- sj_data_for_model %>% slice(13:n())
 
