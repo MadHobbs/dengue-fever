@@ -1,0 +1,12 @@
+name: Dengue_Fever_Prediction
+title: Dengue_Fever_Prediction
+username:
+account: mhobbs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 243194
+bundleId: 1111282
+url: https://mhobbs.shinyapps.io/Dengue_Fever_Prediction/
+when: 1512261103.13074
+asMultiple: FALSE
+asStatic: FALSE
