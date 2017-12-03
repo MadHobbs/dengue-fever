@@ -55,7 +55,7 @@ We think that the station-measured temperature would be preferable, because thes
 We should also think about whether to choose minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant, and we can clearly see from the data below:
 
 ```{r}
-temps <- TrainFull %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c)
+temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c) 
 
 corr_matrix <- cor(temps)
 corr_pmat <- cor_pmat(temps)
@@ -66,7 +66,7 @@ all(corr_pmat < 0.05)
 All pairwise correlations betweent the four measures of temperature are significant. We can see these strong correlations represented in the correlation plot below:
 
 ```{r}
-ggcorrplot(corr_matrix, hc.order = TRUE)
+ggcorrplot(corr_matrix)
 ```
 
 Note that Choi et. al say : "Mean temperature was significantly associated with dengue incidence in all three provinces, but incidence did not correlate well with maximum temperature in Banteay Meanchey, nor with minimum temperature in Kampong Thom at a lag of three months in the negative binomial model." We are inclined to only use mean temperature. 
