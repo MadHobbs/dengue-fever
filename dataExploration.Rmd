@@ -66,7 +66,7 @@ all(corr_pmat < 0.05)
 All pairwise correlations betweent the four measures of temperature are significant. We can see these strong correlations represented in the correlation plot below:
 
 ```{r}
-ggcorrplot(corr_matrix)
+ggcorrplot(corr_matrix, hc.order = TRUE)
 ```
 
 Note that Choi et. al say : "Mean temperature was significantly associated with dengue incidence in all three provinces, but incidence did not correlate well with maximum temperature in Banteay Meanchey, nor with minimum temperature in Kampong Thom at a lag of three months in the negative binomial model." We are inclined to only use mean temperature. 
