@@ -19,7 +19,7 @@ ui <- dashboardPage(
   ## Sidebar content
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Manually Input Predictors", tabName = "input_one_observation", icon = icon("cog", lib = "glyphicon")),
+      menuItem("Manually Input Data", tabName = "input_one_observation", icon = icon("hand-right", lib = "glyphicon")),
       menuItem("Input Data Table", tabName = "input_df", icon = icon("table"))
     )
   ),
@@ -28,7 +28,7 @@ ui <- dashboardPage(
       # First tab content
       tabItem(tabName = "input_one_observation",
               
-              h2("Manually Input Data"),
+              h2("Manually Input Predictors"),
               h4("Input as many rows as you like. Each row will get passed into our random forest model which will predict the number of Dengue Fever cases for a week with the conditions you enter.
                  See 'Results' at the end bottom of the page."),
               h4("You must enter a value for all variables."),
