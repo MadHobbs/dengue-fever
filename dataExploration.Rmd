@@ -29,6 +29,66 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 ```
 
+
+# Preliminary Data Exploration
+
+```{r somePlots , echo = F , warning=FALSE}
+
+enviroPredNames <- colnames(TrainFull)[6:25]
+
+
+
+ggplot(data = TrainFull) + geom_point(aes(x=precipitation_amt_mm, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_air_temp_k, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_precip_amt_kg_per_m2, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_tdtr_k, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFull) + geom_point(aes(x=station_avg_temp_c, y=total_cases)) + facet_grid(city~.)
+
+
+ggplot(data = TrainFull) + geom_point(aes(x=station_precip_mm, y=total_cases)) + facet_grid(city~.)
+
+
+```
+
+```{r seasonalAnalysis , echo = F, warning=FALSE}
+
+#there are 13 weeks in a season
+
+findSeason <- function(week){
+  if (week < 10){
+    return(1)
+  } else if (week < 20){
+    return(2)
+  } else if (week < 31){
+    return(3)
+  } else {
+    return(4)
+  }
+}
+
+
+TrainFullTest <- TrainFull
+
+
+season <- c()
+for (i in 1:length(TrainFullTest$weekofyear)){
+  season <- c(season, findSeason(TrainFullTest$weekofyear[i]))
+}
+TrainFullTest <- cbind(TrainFullTest, season)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=season, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=weekofyear, y=total_cases)) + facet_grid(city~.)
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=week_start_date, y=total_cases)) + facet_grid(city~.)
+
+
+```
+
 # Missing Values
 
 We impute missing values using imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. "
@@ -111,7 +171,7 @@ We separate San Juan and Iquitos data to produce two models, one to predict week
 At the same time, we create two lag variables for each site: temperature lag and precipitation lag. The lagged temperature and precipitation variables record, respectively, what the temperature or precipitation was 12 weeks prior for the observation at hand. 
 
 
-```{r}
+```{r makeTimeLag}
 lag_num_weeks = 12
 
 #make on col which gives year and week of year info
@@ -171,6 +231,8 @@ sj_data_for_model <- select(tempDataIQ, total_cases, year, weekofyear, ndvi_ne, 
 sj_data_for_model <- sj_data_for_model[complete.cases(sj_data_for_model), ]
 iq_data_for_model <- iq_data_for_model[complete.cases(iq_data_for_model), ]
 
+data_for_model <- rbind(sj_data_for_model, iq_data_for_model)
+
   
 ```
 
@@ -216,7 +278,8 @@ Just San Juan data:
 
 ```{r}
 # we should remove the san juan data for which we don't have true precip or temp lag
-sj_data_for_model <- sj_data_for_model %>% slice(13:n())
+#sj_data_for_model <- sj_data_for_model %>% slice(13:n())
+#spliced out NAs for time lag in makeTimeLag chunk
 
 # get out test set
 set.seed(48)
@@ -270,62 +333,3 @@ actual <- data_for_model$total_cases[31:length(data_for_model$total_cases)]
 predicted <- predictions[31:length(predictions)]
 ```
 
-
-# Preliminary Data Exploration
-
-```{r somePlots , echo = F , warning=FALSE}
-
-enviroPredNames <- colnames(TrainFull)[6:25]
-
-
-
-ggplot(data = TrainFull) + geom_point(aes(x=precipitation_amt_mm, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_air_temp_k, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_precip_amt_kg_per_m2, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFull) + geom_point(aes(x=reanalysis_tdtr_k, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFull) + geom_point(aes(x=station_avg_temp_c, y=total_cases)) + facet_grid(city~.)
-
-
-ggplot(data = TrainFull) + geom_point(aes(x=station_precip_mm, y=total_cases)) + facet_grid(city~.)
-
-
-```
-
-```{r seasonalAnalysis , echo = F, warning=FALSE}
-
-#there are 13 weeks in a season
-
-findSeason <- function(week){
-  if (week < 10){
-    return(1)
-  } else if (week < 20){
-    return(2)
-  } else if (week < 31){
-    return(3)
-  } else {
-    return(4)
-  }
-}
-
-
-TrainFullTest <- TrainFull
-
-
-season <- c()
-for (i in 1:length(TrainFullTest$weekofyear)){
-  season <- c(season, findSeason(TrainFullTest$weekofyear[i]))
-}
-TrainFullTest <- cbind(TrainFullTest, season)
-
-ggplot(data = TrainFullTest) + geom_point(aes(x=season, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFullTest) + geom_point(aes(x=weekofyear, y=total_cases)) + facet_grid(city~.)
-
-ggplot(data = TrainFullTest) + geom_point(aes(x=week_start_date, y=total_cases)) + facet_grid(city~.)
-
-
-```
