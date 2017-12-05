@@ -10,8 +10,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE, 
                       fig.width=7, fig.height=4, fig.align = "center")
 
-require(dplyr)
-require(ggplot2)
+require(tidyverse)
 
 TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
 
@@ -22,7 +21,6 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 require(rpart)
 require(caret)
-require(tidyverse)
 require(ggcorrplot)
 library(RANN)
 ```
@@ -163,7 +161,7 @@ iq_precip <- iq_precip$station_precip_mm
 
 index = 12
 while(index < length(iq_precip)) {
-  iq_precip_lag <- c(iq_precip_lag, mean(iq_precip[index-11:index]))
+  iq_precip_lag <- c(iq_precip_lag, iq_precip[index-11]))
   index <- index + 1
 }
 
@@ -250,6 +248,40 @@ RMSE(sj_test$total_cases - preds)
 ```
 
 For a random forest with only city, year, week of year, station_precip_mm, and station_avg_temp_c, and precip_lag we get MAE =10.2 and RMSE = 18.9. 
+
+
+# Model Assessment
+
+As Kane et. al used in their time series Random Forest model, the model was assessed by doing the following: "The simulation begins by using data from the last 30 weeks of data from 2006 to predict the outbreak for the week of 2007 (2007-01-07). The simulation proceeds by iteratively adding a new week of data, training a new model based on the updated data, and predicting the number of outbreaks for the following week."
+
+Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
+
+We'll assess our model's performance by computing the error (MSE) between the model's predicted number of cases and the actual number of cases for each week.
+
+```{r}
+step <- 30
+predictions <- rep(NA, step)
+
+
+index_to_predict = 31
+while(index_to_predict <= length(data_for_model$total_cases)) {
+
+  # use previous 30 weeks to build model
+  data <- slice(data_for_model, (index_to_predict-step):(index_to_predict-1))
+  
+  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:8), importance = TRUE)
+  
+  # predict on single observation:  the next week, the index_to_predict
+  predicted_num_cases <- predict(model, slice(data_for_model, index_to_predict))
+  
+  predictions <- c(predictions, predicted_num_cases)
+  
+  index_to_predict = index_to_predict + 1
+}
+
+actual <- data_for_model$total_cases[31:length(data_for_model$total_cases)]
+predicted <- predictions[31:length(predictions)]
+```
 
 
 # Preliminary Data Exploration
