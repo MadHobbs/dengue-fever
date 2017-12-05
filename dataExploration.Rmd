@@ -11,6 +11,13 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE,
                       fig.width=7, fig.height=4, fig.align = "center")
 
 require(tidyverse)
+require(rpart)
+require(caret)
+require(ggcorrplot)
+library(RANN)
+library(dplyr)
+library(ggcorrplot)
+library(lubridate)
 
 TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
 
@@ -19,10 +26,7 @@ TrainResp <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Labels
 
 TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"))
 
-require(rpart)
-require(caret)
-require(ggcorrplot)
-library(RANN)
+
 ```
 
 # Missing Values
@@ -106,63 +110,70 @@ We separate San Juan and Iquitos data to produce two models, one to predict week
 
 At the same time, we create two lag variables for each site: temperature lag and precipitation lag. The lagged temperature and precipitation variables record, respectively, what the temperature or precipitation was 12 weeks prior for the observation at hand. 
 
-### San Juan Data for Model
 
 ```{r}
 lag_num_weeks = 12
 
-sj_data_for_model <- TrainFull_noNA %>% 
-  
-  # only want data for San Juan
-  filter(city == "sj") %>% 
-  
-  # get in chronological order
-  arrange(year, weekofyear) %>%
-  
-  # save row numbers from full table
-  mutate(index = row_number()) %>%
-  
-  # take out the first lag_num_weeks weeks
-  slice((lag_num_weeks + 1):n()) %>%
-  
-         # create new variable representing what average temperature was 12 weeks           before this observation
-  mutate(temp_lag = TrainFull_noNA$station_avg_temp_c[index - lag_num_weeks],
-         # new variable representing total precipitation 12 weeks before this                observation
-         precip_lag = TrainFull_noNA$precipitation_amt_mm[index - lag_num_weeks]) %>%
-  
-  # select only the predictors we want for the model
-  select(total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent)
-  
-```
+#make on col which gives year and week of year info
+tempData <- mutate(TrainFull_noNA, year_week_temp = paste(as.character(year), "_", as.character(weekofyear), sep="")) %>% mutate(lag_year_week_temp = paste(year(as.Date(week_start_date)-weeks(lag_num_weeks)), "_", week(as.Date(week_start_date)-weeks(lag_num_weeks)), sep=""))
+
+#make year_week and lag_year_week of yyyy_ww format
+tempData <- mutate(tempData, year_week = ifelse(nchar(year_week_temp) == 7, year_week_temp, sub("_", "_0", year_week_temp))) %>% mutate(lag_year_week = ifelse(nchar(lag_year_week_temp) == 7, lag_year_week_temp, sub("_", "_0", lag_year_week_temp)))
+
+tempDataIQ <- filter(tempData, city == "iq")
+tempDataSJ <- filter(tempData, city == "sj")
+
+### San Juan Data for Model
+#want lag for: precipitation_amt_mm and station_avg_temp_c for SJ
+lag_week_temp <- c()
+lag_week_precip <- c()
+for (i in 1:length(tempDataSJ$lag_year_week)){
+  if (sum(grepl(tempDataSJ$lag_year_week[i], tempDataSJ$year_week)) == 1){
+    #find correct index for lag data and add that data to vectors
+    lagWeeki <- grep(tempDataSJ$lag_year_week[i], tempDataSJ$year_week)
+    lag_week_temp <- c(lag_week_temp, tempDataSJ$station_avg_temp_c[lagWeeki])
+    lag_week_precip <- c(lag_week_precip, tempDataSJ$precipitation_amt_mm[lagWeeki])
+  }else {
+    lag_week_temp <- c(lag_week_temp, "NA")
+    lag_week_precip <- c(lag_week_precip, "NA")
+  }
+}           
+
+tempDataSJ$temp_lag <- lag_week_temp
+tempDataSJ$precip_lag <- lag_week_precip
+
+# select only the predictors we want for the model
+iq_data_for_model <- select(tempDataSJ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent)
+
 
 ### Iquitos Data for Model
+#want lag for: precipitation_amt_mm and station_avg_temp_c for IQ
+lag_week_temp <- c()
+lag_week_precip <- c()
+for (i in 1:length(tempDataIQ$lag_year_week)){
+  if (sum(grepl(tempDataIQ$lag_year_week[i], tempDataIQ$year_week)) == 1){
+    #find correct index for lag data and add that data to vectors
+    lagWeeki <- grep(tempDataIQ$lag_year_week[i], tempDataIQ$year_week)
+    lag_week_temp <- c(lag_week_temp, tempDataIQ$station_avg_temp_c[lagWeeki])
+    lag_week_precip <- c(lag_week_precip, tempDataIQ$precipitation_amt_mm[lagWeeki])
+  }else {
+    lag_week_temp <- c(lag_week_temp, "NA")
+    lag_week_precip <- c(lag_week_precip, "NA")
+  }
+}           
 
-```{r}
-lag_num_weeks = 12
+tempDataIQ$temp_lag <- lag_week_temp
+tempDataIQ$precip_lag <- lag_week_precip
 
-iq_data_for_model <- TrainFull_noNA %>% 
-  
-  # only want data for San Juan
-  filter(city == "iq") %>% 
-  
-  # get in chronological order
-  arrange(year, weekofyear) %>%
-  
-  # save row numbers from full table
-  mutate(index = row_number()) %>%
-  
-  # take out the first lag_num_weeks weeks
-  slice((lag_num_weeks + 1):n()) %>%
-  
-         # create new variable representing what average temperature was 12 weeks           before this observation
-  mutate(temp_lag = TrainFull_noNA$station_avg_temp_c[index - lag_num_weeks],
-         # new variable representing total precipitation 12 weeks before this                observation
-         precip_lag = TrainFull_noNA$precipitation_amt_mm[index - lag_num_weeks]) %>%
-  
-  # select only the predictors we want for the model
-  select(total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent)
+# select only the predictors we want for the model
+sj_data_for_model <- select(tempDataIQ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent)
+
+sj_data_for_model <- sj_data_for_model[complete.cases(sj_data_for_model), ]
+iq_data_for_model <- iq_data_for_model[complete.cases(iq_data_for_model), ]
+
   
 ```
+
 
 ## Building a Model
 
