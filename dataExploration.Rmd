@@ -166,10 +166,6 @@ iq_data_for_model <- TrainFull_noNA %>%
 
 ## Building a Model
 
-```{r}
-data_for_model <- TrainFull_noNA %>% select(total_cases, station_precip_mm, station_avg_temp_c, precip_lag, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, reanalysis_relative_humidity_percent)
-```
-
 The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
 
 ```{r}
