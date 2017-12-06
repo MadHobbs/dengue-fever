@@ -15,37 +15,47 @@ library(shinydashboard)
 library(caret)
 
 # load data which constructs random forest model
-sj_data_for_model <- read.csv("sj_data_for_model")
-iq_data_for_model <- read.csv("iq_data_for_model")
+#sj_data_for_model <- read.csv("sj_data_for_model.csv")
+#iq_data_for_model <- read.csv("iq_data_for_model.csv")
 
 # construct two random forest models
-sj_model <- train(total_cases ~ ., 
-                  data = sj_data_for_model, 
-                  method = "rf", 
-                  trControl =  trainControl(method = "oob"), 
-                  ntree = 500, 
-                  tuneGrid = data.frame(mtry = 1:12), 
-                  importance = TRUE)
-iq_model <- train(total_cases ~ ., 
-                  data = iq_data_for_model, 
-                  method = "rf", 
-                  trControl =  trainControl(method = "oob"), 
-                  ntree = 500, 
-                  tuneGrid = data.frame(mtry = 1:12), 
-                  importance = TRUE)
+#sj_model <- train(total_cases ~ ., 
+                  #data = sj_data_for_model, 
+                 # method = "rf", 
+                 # trControl =  trainControl(method = "oob"), 
+                 # ntree = 500, 
+                 # tuneGrid = data.frame(mtry = 1:12), 
+                 # importance = TRUE)
+#iq_model <- train(total_cases ~ ., 
+               #   data = iq_data_for_model, 
+               #   method = "rf", 
+               #   trControl =  trainControl(method = "oob"), 
+               #   ntree = 500, 
+               #   tuneGrid = data.frame(mtry = 1:12), 
+               #   importance = TRUE)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Predicting Dengue"),
+
   ## Sidebar content
   dashboardSidebar(
     sidebarMenu(
+      menuItem("Our model", tabName = "our_model", icon = icon("world")),
       menuItem("Manually Input Data", tabName = "input_one_observation", icon = icon("hand-right", lib = "glyphicon")),
       menuItem("Input Data Table", tabName = "input_df", icon = icon("table"))
     )
   ),
   dashboardBody(
+
     tabItems(
       # First tab content
+      tabItem(tabName = "our_model",
+              h2("Predicting Weekly Dengue Fever Cases"),
+              h3("San Juan, Puerto Rico and Iquitos, Ecuador"),
+              dataTableOutput("our_sj_table")
+
+      ),
+      # Second tab content
       tabItem(tabName = "input_one_observation",
               
               h2("Manually Input Predictors"),
@@ -57,7 +67,7 @@ ui <- dashboardPage(
               sidebarLayout(
                 
                 sidebarPanel(
-                sliderInput(inputId = "year", 
+                numericInput(inputId = "year", 
                               label = "Year", 
                               value = NA, min = 0),
                   
@@ -92,7 +102,7 @@ ui <- dashboardPage(
       tabItem(tabName = "input_df",
               # Copy the line below to make a file upload manager
               fileInput("file", label = h3("Select data file")),
-              DT::dataTableOutput("table_file")
+              dataTableOutput("table_file")
       )
     )
   )
@@ -100,11 +110,25 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
+  sj_data_for_model <- read.csv("sj_data_for_model.csv")
+  
+  output$our_sj_table <- renderDataTable({sj_data_for_model})
+  
+  sj_model <- train(total_cases ~ ., 
+                    data = sj_data_for_model, 
+                     method = "rf", 
+                     trControl =  trainControl(method = "oob"), 
+                     ntree = 500, 
+                     tuneGrid = data.frame(mtry = 1:12), 
+                     importance = TRUE)
+  
   values <- reactiveValues()
   
-  values$DT <- data.frame(week_of_year = NA,
-                          avg_temperature = NA,
-                          total_precipitation = NA,
+  values$DT <- data.frame(year = NA, 
+                          week_of_year = NA,
+                          precipitation_amt_mm = NA,
+                          avg_temp = NA,
+                          relative_humidity_percent = NA,
                           stringsAsFactors = FALSE)
   
   newEntry <- observeEvent(input$addrow, {
@@ -119,10 +143,13 @@ server <- function(input, output, session) {
   
   output$table <- renderDataTable({
     values$DT
+    
   })
   
   # impute missing values in values$DT
-  values$DT <- preProcess(values$DT)
+  #values$DT <- preProcess(values$DT)
+  
+  output$prediction_table <- renderDataTable(values$DT)
   
   #filedata <- reactive({
    # infile <- input$datafile
