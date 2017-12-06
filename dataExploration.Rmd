@@ -18,6 +18,7 @@ library(RANN)
 library(dplyr)
 library(ggcorrplot)
 library(lubridate)
+library(hydroGOF)
 
 TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
 
@@ -173,7 +174,7 @@ At the same time, we create two lag variables for each site: temperature lag and
 Time laged environmental variables have been shown to be a signifigant predictors. Specifically we consider temperature and relative humidity (Wu et al 2007). 
 
 
-```{r makeTimeLag}
+```{r makeTimeLags}
 lag_num_weeks = 12
 
 #make on col which gives year and week of year info
@@ -198,9 +199,9 @@ for (i in 1:length(tempDataSJ$lag_year_week)){
     lag_week_precip <- c(lag_week_precip, tempDataSJ$precipitation_amt_mm[lagWeeki])
     lag_week_humid <- c(lag_week_humid, tempDataSJ$reanalysis_relative_humidity_percent[lagWeeki])
   }else {
-    lag_week_temp <- c(lag_week_temp, "NA")
-    lag_week_precip <- c(lag_week_precip, "NA")
-    lag_week_humid <- c(lag_week_humid, "NA")
+    lag_week_temp <- c(lag_week_temp, NA)
+    lag_week_precip <- c(lag_week_precip, NA)
+    lag_week_humid <- c(lag_week_humid, NA)
   }
 }           
 
@@ -209,7 +210,7 @@ tempDataSJ$precip_lag <- lag_week_precip
 tempDataSJ$humidity_lag <- lag_week_humid 
 
 # select only the predictors we want for the model
-iq_data_for_model <- select(tempDataSJ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, humidity_lag, reanalysis_relative_humidity_percent)
+sj_data_for_model <- select(tempDataSJ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent, humidity_lag)
 
 
 ### Iquitos Data for Model
@@ -225,35 +226,49 @@ for (i in 1:length(tempDataIQ$lag_year_week)){
     lag_week_precip <- c(lag_week_precip, tempDataIQ$precipitation_amt_mm[lagWeeki])
     lag_week_humid <- c(lag_week_humid, tempDataIQ$reanalysis_relative_humidity_percent[lagWeeki])
   }else {
-    lag_week_temp <- c(lag_week_temp, "NA")
-    lag_week_precip <- c(lag_week_precip, "NA")
-    lag_week_humid <- c(lag_week_humid, "NA")
+    lag_week_temp <- c(lag_week_temp, NA)
+    lag_week_precip <- c(lag_week_precip, NA)
+    lag_week_humid <- c(lag_week_humid, NA)
   }
 }           
 
-tempDataIQ$temp_lag <- lag_week_temp
-tempDataIQ$precip_lag <- lag_week_precip
-tempDataIQ$humidity_lag <- lag_week_humid
+tempDataIQ$temp_lag <- as.numeric(lag_week_temp)
+tempDataIQ$precip_lag <- as.numeric(lag_week_precip)
+tempDataIQ$humidity_lag <- as.numeric(lag_week_humid)
 
 # select only the predictors we want for the model
-sj_data_for_model <- select(tempDataIQ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, humidity_lag, reanalysis_relative_humidity_percent)
+iq_data_for_model <- select(tempDataIQ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent, humidity_lag, )
 
-#sj_data_for_model <- sj_data_for_model[complete.cases(sj_data_for_model), ]
-#iq_data_for_model <- iq_data_for_model[complete.cases(iq_data_for_model), ]
+```
 
+```{r produceDataForModels}
 iq_data_for_model <- filter(iq_data_for_model, humidity_lag != "NA")
 sj_data_for_model <- filter(sj_data_for_model, humidity_lag != "NA")
 
+# get good names for columns
+iq_data_for_model <- iq_data_for_model %>% rename(week_of_year = weekofyear)
+sj_data_for_model <- sj_data_for_model %>% rename(week_of_year = weekofyear)
+```
 
-data_for_model <- rbind(sj_data_for_model, iq_data_for_model)
-
-  
+```{r}
+# write data for model use to files for later use
+write.csv(sj_data_for_model, file = "sj_data_for_model.csv")
+write.csv(iq_data_for_model, file = "iq_data_for_model.csv")
 ```
 
 
 ## Building a Model
 
+```{r}
+sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+
+iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+```
+
+
 The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
+
+# Model Assessment
 
 ```{r}
 # returns Mean Absolute Error
@@ -271,75 +286,88 @@ RMSE <- function(error)
 }
 ```
 
-```{r}
-test <- sample_n(data_for_model, length(data_for_model$total_cases) * 0.1)
-train <- anti_join(data_for_model, test)
-
-model <- train(total_cases ~ ., data = train, method = "rf", trControl = trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:8), importance = TRUE)
-
-preds <- predict(model, test)
-MAE(test$total_cases - preds)
-RMSE(test$total_cases - preds)
-
-varImp(model)
-```
-
-Just San Juan data:
-
-```{r}
-# we should remove the san juan data for which we don't have true precip or temp lag
-#sj_data_for_model <- sj_data_for_model %>% slice(13:n())
-#spliced out NAs for time lag in makeTimeLag chunk
-
-# get out test set
-set.seed(48)
-sj_test <- sample_n(sj_data_for_model, 71)
-sj_train <- anti_join(sj_data_for_model, sj_test)
-
-sj_rf_train <- train(total_cases ~ ., data = sj_train, method = "rf", trControl = trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:6), importance = TRUE)
-
-sj_rf_train
-
-varImp(sj_rf_train)
-
-preds <- predict(sj_rf_train, sj_test)
-MAE(sj_test$total_cases - preds)
-RMSE(sj_test$total_cases - preds)
-```
-
-For a random forest with only city, year, week of year, station_precip_mm, and station_avg_temp_c, and precip_lag we get MAE =10.2 and RMSE = 18.9. 
-
-
-# Model Assessment
-
 As Kane et. al used in their time series Random Forest model, the model was assessed by doing the following: "The simulation begins by using data from the last 30 weeks of data from 2006 to predict the outbreak for the week of 2007 (2007-01-07). The simulation proceeds by iteratively adding a new week of data, training a new model based on the updated data, and predicting the number of outbreaks for the following week."
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
 We'll assess our model's performance by computing the error (MSE) between the model's predicted number of cases and the actual number of cases for each week.
 
+## San Juan Model Assessment
+
 ```{r}
 step <- 30
 predictions <- rep(NA, step)
 
-
 index_to_predict = 31
-while(index_to_predict <= length(data_for_model$total_cases)) {
+while(index_to_predict <= length(sj_data_for_model$total_cases)) {
 
   # use previous 30 weeks to build model
-  data <- slice(data_for_model, (index_to_predict-step):(index_to_predict-1))
+  data <- slice(sj_data_for_model, (index_to_predict-step):(index_to_predict-1))
   
-  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:8), importance = TRUE)
+  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
   
   # predict on single observation:  the next week, the index_to_predict
-  predicted_num_cases <- predict(model, slice(data_for_model, index_to_predict))
+  predicted_num_cases <- predict(model, slice(sj_data_for_model, index_to_predict))
   
   predictions <- c(predictions, predicted_num_cases)
   
   index_to_predict = index_to_predict + 1
 }
 
-actual <- data_for_model$total_cases[31:length(data_for_model$total_cases)]
+actual <- sj_data_for_model$total_cases[31:length(sj_data_for_model$total_cases)]
 predicted <- predictions[31:length(predictions)]
+
+RMSE(predicted - actual)
+MAE(predicted - actual)
+
+# ranges from 0 to 100, scaled to data
+nrmse(predicted, actual)
 ```
 
+```{r}
+sj_prospective_preds <- data.frame(sj_data_for_model$year[31:length(sj_data_for_model$total_cases)], sj_data_for_model$week_of_year[31:length(sj_data_for_model$total_cases)], actual, predicted)
+colnames(sj_prospective_preds) = c("year", "week_of_year", "actual", "predicted")
+sj_prospective_preds <- sj_prospective_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted Weekly Dengue Cases")
+```
+
+
+## Iquitos Model Assessment
+
+```{r}
+step <- 30
+predictions <- rep(NA, step)
+
+index_to_predict = 31
+while(index_to_predict <= length(iq_data_for_model$total_cases)) {
+
+  # use previous 30 weeks to build model
+  data <- slice(iq_data_for_model, (index_to_predict-step):(index_to_predict-1))
+  
+  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+  
+  # predict on single observation:  the next week, the index_to_predict
+  predicted_num_cases <- predict(model, slice(iq_data_for_model, index_to_predict))
+  
+  predictions <- c(predictions, predicted_num_cases)
+  
+  index_to_predict = index_to_predict + 1
+}
+
+actual <- iq_data_for_model$total_cases[31:length(iq_data_for_model$total_cases)]
+predicted <- predictions[31:length(predictions)]
+
+RMSE(predicted - actual)
+MAE(predicted - actual)
+
+nrmse(predicted, actual)
+```
+
+```{r}
+iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, predicted)
+colnames(iq_prospective_preds) = c("year", "week_of_year", "actual", "predicted")
+iq_prospective_preds <- iq_prospective_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos : Actual vs. Predicted Weekly Dengue Cases")
+```
