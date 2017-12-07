@@ -102,13 +102,6 @@ head(TrainFull_noNA)
 anyNA(TrainFull_noNA)
 ```
 
-```{r}
-all_rf <- train(total_cases ~ ., data = TrainFull_noNA, method = "rf", na.action = na.pass, trControl = trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:24), importance = TRUE)
-
-all_rf
-```
-
-
 # Variable Selection
 
 ## Temperature
@@ -259,16 +252,49 @@ write.csv(iq_data_for_model, file = "iq_data_for_model.csv")
 
 ## Building a Model
 
-```{r}
+`
 sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+sj_model
+sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 11), importance = TRUE)
+sj_model
 
 iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
-```
+iq_model
+`
 
 
 The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
 
 # Model Assessment
+
+## Timeless Model
+
+```{r}
+test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
+train <- anti_join(sj_data_for_model, test)
+
+set.seed(92)
+sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+sj_model
+set.seed(82)
+sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 8), importance = TRUE)
+sj_model
+
+predictions <- predict(sj_model, test)
+RMSE(predictions - test$total_cases)
+```
+
+```{r}
+set.seed(94)
+iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+iq_model
+
+set.seed(83)
+iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "cv"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+iq_model
+```
+
+RMSE= 
 
 ```{r}
 # returns Mean Absolute Error
@@ -298,10 +324,10 @@ We'll assess our model's performance by computing the error (MSE) between the mo
 step <- 30
 predictions <- rep(NA, step)
 
-index_to_predict = 31
+index_to_predict = step + 1
 while(index_to_predict <= length(sj_data_for_model$total_cases)) {
 
-  # use previous 30 weeks to build model
+  # use previous "step" number of weeks to build model
   data <- slice(sj_data_for_model, (index_to_predict-step):(index_to_predict-1))
   
   model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
@@ -339,10 +365,10 @@ ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 step <- 30
 predictions <- rep(NA, step)
 
-index_to_predict = 31
+index_to_predict = step + 1
 while(index_to_predict <= length(iq_data_for_model$total_cases)) {
 
-  # use previous 30 weeks to build model
+  # use previous "step" number of weeks to build model
   data <- slice(iq_data_for_model, (index_to_predict-step):(index_to_predict-1))
   
   model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
@@ -363,6 +389,8 @@ MAE(predicted - actual)
 
 nrmse(predicted, actual)
 ```
+
+RMSE = 9.351698
 
 ```{r}
 iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, predicted)
