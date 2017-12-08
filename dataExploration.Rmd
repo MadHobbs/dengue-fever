@@ -285,13 +285,18 @@ RMSE(predictions - test$total_cases)
 ```
 
 ```{r}
-set.seed(94)
-iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
+train <- anti_join(iq_data_for_model, test)
+
+set.seed(92)
+iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+iq_model
+set.seed(82)
+iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
 iq_model
 
-set.seed(83)
-iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "cv"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
-iq_model
+predictions <- predict(iq_model, test)
+RMSE(predictions - test$total_cases)
 ```
 
 RMSE= 
