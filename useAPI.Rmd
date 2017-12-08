@@ -1,0 +1,44 @@
+---
+title: "useAPI"
+author: "Jenn Havens"
+date: "December 8, 2017"
+output: html_document
+---
+
+```{r loadInfo}
+
+library(rwunderground)
+library(httr)
+library(curl)
+
+set_api_key("a483d97cf372d5c9")
+
+#historyTest <- history_daily("Seattle", date = "20150101")
+#historyTest <- rbind(historyTest, history_daily("Seattle", date = "20150102"))
+```
+
+```{r gettingTimeLagData}
+
+testDate <- "20150101"
+
+SJlocation <- set_location(airport_code = "TJSJ")
+geolookup(SJlocation)
+
+dayData <- history_daily(location = SJlocation, date = testDate, use_metric = T)
+
+dayTemp <- dayData$mean_temp
+dayHumid <- sum(dayData$min_humid, dayData$max_humid)/2
+dayPrecip <- 10*(dayData$precip)
+
+
+IQlocation <- set_location(airport_code = "IQT")
+geolookup(IQlocation)
+
+dayData <- history_daily(location = IQlocation, date = testDate, use_metric = T)
+
+dayTemp <- dayData$mean_temp
+dayHumid <- sum(dayData$min_humid, dayData$max_humid)/2
+dayPrecip <- 10*(dayData$precip)
+
+
+```
