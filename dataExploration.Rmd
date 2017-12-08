@@ -232,21 +232,12 @@ tempDataIQ$humidity_lag <- as.numeric(lag_week_humid)
 # select only the predictors we want for the model
 iq_data_for_model <- select(tempDataIQ, total_cases, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent, humidity_lag, )
 
-```
-
-```{r produceDataForModels}
 iq_data_for_model <- filter(iq_data_for_model, humidity_lag != "NA")
 sj_data_for_model <- filter(sj_data_for_model, humidity_lag != "NA")
 
 # get good names for columns
 iq_data_for_model <- iq_data_for_model %>% rename(week_of_year = weekofyear, relative_humidity_percent = reanalysis_relative_humidity_percent)
 sj_data_for_model <- sj_data_for_model %>% rename(week_of_year = weekofyear, relative_humidity_percent = reanalysis_relative_humidity_percent)
-```
-
-```{r}
-# write data for model use to files for later use
-write.csv(sj_data_for_model, file = "sj_data_for_model.csv")
-write.csv(iq_data_for_model, file = "iq_data_for_model.csv")
 ```
 
 
@@ -466,12 +457,15 @@ set.seed(76)
 test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
 train <- anti_join(iq_data_for_model, test)
 
-set.seed(93)
+set.seed(91)
 iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 iq_model
-set.seed(82)
-iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+set.seed(84)
+iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
 iq_model
+
+# save this model as rda
+save(iq_model, file = "iq_model.rda")
 
 predictions <- predict(iq_model, test)
 RMSE(predictions - test$total_cases)

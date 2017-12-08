@@ -16,26 +16,7 @@ library(caret)
 library(tidyverse)
 
 load(file = "sj_model.rda",.GlobalEnv)
-
-# load data which constructs random forest model
-#sj_data_for_model <- read.csv("sj_data_for_model.csv")
-#iq_data_for_model <- read.csv("iq_data_for_model.csv")
-
-# construct two random forest models
-#sj_model <- train(total_cases ~ ., 
-                  #data = sj_data_for_model, 
-                 # method = "rf", 
-                 # trControl =  trainControl(method = "oob"), 
-                 # ntree = 500, 
-                 # tuneGrid = data.frame(mtry = 1:12), 
-                 # importance = TRUE)
-#iq_model <- train(total_cases ~ ., 
-               #   data = iq_data_for_model, 
-               #   method = "rf", 
-               #   trControl =  trainControl(method = "oob"), 
-               #   ntree = 500, 
-               #   tuneGrid = data.frame(mtry = 1:12), 
-               #   importance = TRUE)
+load(file = "iq_model.rda",.GlobalEnv)
 
 ui <- dashboardPage(
   
@@ -63,9 +44,15 @@ ui <- dashboardPage(
       tabItem(tabName = "input_one_observation",
               
               h2("Manually Input Predictors"),
-              h4("Input as many rows as you like. Each row will get passed into our random forest model which will predict the number of Dengue Fever cases for a week with the conditions you enter.
-                 See 'Results' at the end bottom of the page."),
-              h4("You must enter a value for all variables."),
+              h4("Input as many rows as you like. 
+                 Each row will get passed into our random forest model 
+                 which will predict the number of Dengue Fever cases for 
+                 a week with the conditions you enter. Our model was trained
+                 on data from NOAA's Dengue Fever Prediction page (sourced through Driven Data). "),
+              h4("You must enter a value for all variables. For climate data,
+                  visit Weather Underground API. For the current Normalized Difference Vegetation
+                  Index (NDVI), 
+                  visit https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index"),
               hr(),
               
               sidebarLayout(
@@ -73,37 +60,37 @@ ui <- dashboardPage(
                 sidebarPanel(
                 checkboxGroupInput("which_city", label = h3("Which City?"), 
                                      choices = list("San Juan, Puerto Rico" = "sj", "Iquitos, Ecuador" = "iq"), 
-                                     selected = NA),
+                                     selected = 0),
                 numericInput(inputId = "precipitation_amt_mm", 
                              label = "Week's Total Precipitation (mm)", 
-                             value = NA), 
+                             value = 0, min = 0), 
                 numericInput(inputId = "precip_lag", 
                              label = "12 Weeks Ago Total Precipitation (mm)", 
-                             value = NA), 
+                             value = 0, min = 0), 
                 numericInput(inputId = "station_avg_temp_c", 
                                      label = "Week's Average Temperature (degrees C)", 
-                                     value = NA),
+                                     value = 0),
                 numericInput(inputId = "temp_lag", 
                              label = "12 Weeks Ago Average Temperature (degrees C)", 
-                             value = NA),
+                             value = 0),
                 numericInput(inputId = "relative_humidity_percent", 
                              label = "Week's Average Relative Humidity Percent", 
-                             value = NA), 
+                             value = 0, min = 0, max = 100), 
                 numericInput(inputId = "humidity_lag", 
                              label = "12 Weeks Ago Average Relative Humidity Percent", 
-                             value = NA), 
+                             value = 0, min = 0, max = 100), 
                 numericInput(inputId = "ndvi_ne", 
                              label = "NDVI NE", 
-                             value = NA),
+                             value = 0, min = -1, max = 1),
                 numericInput(inputId = "ndvi_nw", 
                              label = "NDVI NW", 
-                             value = NA),
+                             value = 0, min = -1, max = 1),
                 numericInput(inputId = "ndvi_se", 
                              label = "NDVI SE", 
-                             value = NA),
+                             value = 0, min = -1, max = 1),
                 numericInput(inputId = "ndvi_sw", 
                              label = "NDVI SW", 
-                             value = NA),
+                             value = 0, min = -1, max = 1),
 
                 hr(),
                 actionButton("addrow", "Add Row"),
@@ -111,12 +98,12 @@ ui <- dashboardPage(
               
               ), 
               mainPanel(
-                dataTableOutput("table"),
+                h1("Predictions"),
+                hr(),
+                hr(),
                 dataTableOutput("predictions")
               )
-              ),
-              
-              h3("Results")
+              )
               
       ),
       
@@ -132,71 +119,63 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  values <- reactiveValues()
+  pred_values <- reactiveValues()
   
-  values$DT <- data.frame(predicted_num_cases = NA,
-                          which_city = NA,
-                          precipitation_amt_mm = NA,
-                          precip_lag = NA,
-                          station_avg_temp_c = NA,
-                          temp_lag = NA,
-                          relative_humidity_percent = NA,
-                          humidity_lag = NA,
-                          ndvi_ne = NA,
-                          ndvi_nw = NA,
-                          ndvi_se = NA,
-                          ndvi_sw = NA,
-                          stringsAsFactors = FALSE)
+  pred_values$DT <- data.frame(predicted_num_cases = NA,
+    which_city =  NA,
+    precipitation_amt_mm =  NA,
+    precip_lag =  NA,
+    station_avg_temp_c =  NA,
+    temp_lag =  NA,
+    relative_humidity_percent =  NA,
+    humidity_lag =  NA,
+    ndvi_ne =  NA,
+    ndvi_nw =  NA,
+    ndvi_se =  NA,
+    ndvi_sw =  NA,
+    stringsAsFactors = FALSE)
   
   newEntry <- observeEvent(input$addrow, {
-    newLine <- c(reactive(as.numeric(predict(sj_model, newLine), 
-                 input$which_city, input$precipitation_amt_mm, input$precip_lag, input$station_avg_temp_c,
-                 input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
-                 input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
-    pred <- ))
-    newLine <- c(pred, newLine)
-    values$DT <- rbind(values$DT, newLine)
+    preds <- c
+    newLine <- data.frame(
+      precipitation_amt_mm = input$precipitation_amt_mm,
+      precip_lag = input$precip_lag,
+      station_avg_temp_c = input$station_avg_temp_c,
+      temp_lag = input$temp_lag,
+      relative_humidity_percent = input$relative_humidity_percent,
+      humidity_lag = input$humidity_lag,
+      ndvi_ne = input$ndvi_ne,
+      ndvi_nw = input$ndvi_nw,
+      ndvi_se = input$ndvi_se,
+      ndvi_sw = input$ndvi_sw)
+    
+    if(input$which_city == "sj") {
+      newPredLine <- c(predict(sj_model, newLine), input$which_city, 
+                       input$precipitation_amt_mm, 
+                       input$precip_lag, input$station_avg_temp_c,
+                       input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
+                       input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
+    } 
+    else if (input$which_city == "iq") {
+      newPredLine <- c(predict(iq_model, newLine), input$which_city, 
+                       input$precipitation_amt_mm, 
+                       input$precip_lag, input$station_avg_temp_c,
+                       input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
+                       input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
+    }
+    else {
+      newPredLine <- c()
+    }
+    
+    pred_values$DT <- rbind(pred_values$DT, newPredLine)
   })
   
   newEntry <- observeEvent(input$revrow, {
-    deleteLine <- values$DT[-nrow(values$DT), ]
-    values$DT <- deleteLine
+    deleteLine <- pred_values$DT[-nrow(pred_values$DT), ]
+    pred_values$DT <- deleteLine
   })
   
-  output$table <- renderDataTable({
-    values$DT
-    
-  #pred_values <- reactiveValues()
-  
-  #pred_values$DT <- cbind(predicted_num_cases = predict(sj_model, values$DT), values$DT)
-  
-  #output$predictions <- renderDataTable({pred_values$DT})
-    
-  })
-  
-  # impute missing values in values$DT
-  #values$DT <- preProcess(values$DT)
-  
-  #predictions <- predict(sj_model, values$DT)
-  
-  #input_with_preds <- rbind(values$DT, predictions)
-  
-  #output$prediction_table <- renderDataTable(values$DT)
-  
-  #filedata <- reactive({
-   # infile <- input$datafile
-   # if (is.null(infile)) {
-    #  # User has not uploaded a file yet
-    #  return(NULL)
-    #  data <- read.csv(infile$datapath)
-    #  data
-   # }
-   # read.csv(infile$datapath)
-    
-  #})
-  
-  
-  output$table_file <- DT::renderDataTable({input$file})
+  output$predictions <- renderDataTable({pred_values$DT})
 }
 
 shinyApp(ui = ui, server = server)
