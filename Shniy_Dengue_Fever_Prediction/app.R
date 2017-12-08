@@ -15,6 +15,8 @@ library(shinydashboard)
 library(caret)
 library(tidyverse)
 
+load(file = "sj_model.rda",.GlobalEnv)
+
 # load data which constructs random forest model
 #sj_data_for_model <- read.csv("sj_data_for_model.csv")
 #iq_data_for_model <- read.csv("iq_data_for_model.csv")
@@ -36,6 +38,7 @@ library(tidyverse)
                #   importance = TRUE)
 
 ui <- dashboardPage(
+  
   dashboardHeader(title = "Predicting Dengue"),
 
   ## Sidebar content
@@ -68,22 +71,39 @@ ui <- dashboardPage(
               sidebarLayout(
                 
                 sidebarPanel(
-                numericInput(inputId = "year", 
-                              label = "Year", 
-                              value = NA, min = 0),
-                  
-                sliderInput(inputId = "week_of_year", 
-                                             label = "Week of Year (1 to 52)", 
-                                             value = 1, min = 1, max = 52), 
+                checkboxGroupInput("which_city", label = h3("Which City?"), 
+                                     choices = list("San Juan, Puerto Rico" = "sj", "Iquitos, Ecuador" = "iq"), 
+                                     selected = NA),
                 numericInput(inputId = "precipitation_amt_mm", 
                              label = "Week's Total Precipitation (mm)", 
                              value = NA), 
-                numericInput(inputId = "avg_temp", 
+                numericInput(inputId = "precip_lag", 
+                             label = "12 Weeks Ago Total Precipitation (mm)", 
+                             value = NA), 
+                numericInput(inputId = "station_avg_temp_c", 
                                      label = "Week's Average Temperature (degrees C)", 
                                      value = NA),
+                numericInput(inputId = "temp_lag", 
+                             label = "12 Weeks Ago Average Temperature (degrees C)", 
+                             value = NA),
                 numericInput(inputId = "relative_humidity_percent", 
-                             label = "Relative Humidity Percent", 
+                             label = "Week's Average Relative Humidity Percent", 
                              value = NA), 
+                numericInput(inputId = "humidity_lag", 
+                             label = "12 Weeks Ago Average Relative Humidity Percent", 
+                             value = NA), 
+                numericInput(inputId = "ndvi_ne", 
+                             label = "NDVI NE", 
+                             value = NA),
+                numericInput(inputId = "ndvi_nw", 
+                             label = "NDVI NW", 
+                             value = NA),
+                numericInput(inputId = "ndvi_se", 
+                             label = "NDVI SE", 
+                             value = NA),
+                numericInput(inputId = "ndvi_sw", 
+                             label = "NDVI SW", 
+                             value = NA),
 
                 hr(),
                 actionButton("addrow", "Add Row"),
@@ -91,12 +111,13 @@ ui <- dashboardPage(
               
               ), 
               mainPanel(
-                dataTableOutput("table")
+                dataTableOutput("table"),
+                dataTableOutput("predictions")
               )
               ),
               
-              h3("Results"),
-              dataTableOutput("prediction_table")
+              h3("Results")
+              
       ),
       
       # Second tab content
@@ -111,26 +132,29 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  sj_data_for_model <- read.csv("sj_data_for_model.csv") %>% select(-X)
-  
-  sj_model <- train(total_cases ~ ., 
-                    data = sj_data_for_model, 
-                    method = "rf", 
-                    trControl =  trainControl(method = "oob"), 
-                    ntree = 500, tuneGrid = data.frame(mtry = 2), 
-                    importance = TRUE)
-  
   values <- reactiveValues()
   
-  values$DT <- data.frame(year = NA, 
-                          week_of_year = NA,
+  values$DT <- data.frame(predicted_num_cases = NA,
+                          which_city = NA,
                           precipitation_amt_mm = NA,
-                          avg_temp = NA,
+                          precip_lag = NA,
+                          station_avg_temp_c = NA,
+                          temp_lag = NA,
                           relative_humidity_percent = NA,
+                          humidity_lag = NA,
+                          ndvi_ne = NA,
+                          ndvi_nw = NA,
+                          ndvi_se = NA,
+                          ndvi_sw = NA,
                           stringsAsFactors = FALSE)
   
   newEntry <- observeEvent(input$addrow, {
-    newLine <- c(input$week_of_year, input$avg_temp, input$total_precip)
+    newLine <- c(reactive(as.numeric(predict(sj_model, newLine), 
+                 input$which_city, input$precipitation_amt_mm, input$precip_lag, input$station_avg_temp_c,
+                 input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
+                 input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
+    pred <- ))
+    newLine <- c(pred, newLine)
     values$DT <- rbind(values$DT, newLine)
   })
   
@@ -142,16 +166,22 @@ server <- function(input, output, session) {
   output$table <- renderDataTable({
     values$DT
     
+  #pred_values <- reactiveValues()
+  
+  #pred_values$DT <- cbind(predicted_num_cases = predict(sj_model, values$DT), values$DT)
+  
+  #output$predictions <- renderDataTable({pred_values$DT})
+    
   })
   
   # impute missing values in values$DT
   #values$DT <- preProcess(values$DT)
   
-  predictions <- predict(sj_model, values$DT)
+  #predictions <- predict(sj_model, values$DT)
   
-  input_with_preds <- rbind(values$DT, predictions)
+  #input_with_preds <- rbind(values$DT, predictions)
   
-  output$prediction_table <- renderDataTable(values$DT)
+  #output$prediction_table <- renderDataTable(values$DT)
   
   #filedata <- reactive({
    # infile <- input$datafile

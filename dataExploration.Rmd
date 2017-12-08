@@ -239,8 +239,8 @@ iq_data_for_model <- filter(iq_data_for_model, humidity_lag != "NA")
 sj_data_for_model <- filter(sj_data_for_model, humidity_lag != "NA")
 
 # get good names for columns
-iq_data_for_model <- iq_data_for_model %>% rename(week_of_year = weekofyear)
-sj_data_for_model <- sj_data_for_model %>% rename(week_of_year = weekofyear)
+iq_data_for_model <- iq_data_for_model %>% rename(week_of_year = weekofyear, relative_humidity_percent = reanalysis_relative_humidity_percent)
+sj_data_for_model <- sj_data_for_model %>% rename(week_of_year = weekofyear, relative_humidity_percent = reanalysis_relative_humidity_percent)
 ```
 
 ```{r}
@@ -385,7 +385,7 @@ set.seed(92)
 sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
 sj_model
 set.seed(82)
-sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
 sj_model
 
 predictions <- predict(sj_model, test)
@@ -411,7 +411,7 @@ set.seed(54)
 iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -precip_lag, -temp_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
 iq_model
 set.seed(45)
-iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
 iq_model
 
 predictions <- predict(iq_model, test)
@@ -436,15 +436,20 @@ test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
 train <- anti_join(sj_data_for_model, test)
 
 set.seed(97)
-sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 sj_model
 set.seed(81)
-sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 10), importance = TRUE)
 sj_model
+
+# save this model as rda
+save(sj_model, file = "sj_model.rda")
 
 predictions <- predict(sj_model, test)
 RMSE(predictions - test$total_cases)
 ```
+
+When taking ndvi out of the model, the RMSE rises to 24.66074. 
 
 ```{r}
 sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
