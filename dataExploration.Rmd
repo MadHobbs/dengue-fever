@@ -265,41 +265,7 @@ iq_model
 
 The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
 
-# Model Assessment
-
-## Timeless Model
-
-```{r}
-test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
-train <- anti_join(sj_data_for_model, test)
-
-set.seed(92)
-sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
-sj_model
-set.seed(82)
-sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 8), importance = TRUE)
-sj_model
-
-predictions <- predict(sj_model, test)
-RMSE(predictions - test$total_cases)
-```
-
-```{r}
-test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
-train <- anti_join(iq_data_for_model, test)
-
-set.seed(92)
-iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
-iq_model
-set.seed(82)
-iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
-iq_model
-
-predictions <- predict(iq_model, test)
-RMSE(predictions - test$total_cases)
-```
-
-RMSE= 
+# Model Construction
 
 ```{r}
 # returns Mean Absolute Error
@@ -317,13 +283,15 @@ RMSE <- function(error)
 }
 ```
 
+## As a Time Series
+
 As Kane et. al used in their time series Random Forest model, the model was assessed by doing the following: "The simulation begins by using data from the last 30 weeks of data from 2006 to predict the outbreak for the week of 2007 (2007-01-07). The simulation proceeds by iteratively adding a new week of data, training a new model based on the updated data, and predicting the number of outbreaks for the following week."
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
 We'll assess our model's performance by computing the error (MSE) between the model's predicted number of cases and the actual number of cases for each week.
 
-## San Juan Model Assessment
+## San Juan
 
 ```{r}
 step <- 30
@@ -364,7 +332,7 @@ ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 ```
 
 
-## Iquitos Model Assessment
+## Iquitos
 
 ```{r}
 step <- 30
@@ -404,3 +372,112 @@ iq_prospective_preds <- iq_prospective_preds %>% mutate(week_index = row_number(
 
 ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos : Actual vs. Predicted Weekly Dengue Cases")
 ```
+
+## With Environmental Varibles Only 
+
+### San Juan 
+
+```{r}
+test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
+train <- anti_join(sj_data_for_model, test)
+
+set.seed(92)
+sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
+sj_model
+set.seed(82)
+sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+sj_model
+
+predictions <- predict(sj_model, test)
+RMSE(predictions - test$total_cases)
+```
+
+```{r}
+sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
+colnames(sj_preds) = c("year", "week_of_year", "actual", "predicted")
+sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Climate Variables Only")
+```
+
+### Iquitos
+
+```{r}
+set.seed(44)
+test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
+train <- anti_join(iq_data_for_model, test)
+
+set.seed(54)
+iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -precip_lag, -temp_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
+iq_model
+set.seed(45)
+iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+iq_model
+
+predictions <- predict(iq_model, test)
+RMSE(predictions - test$total_cases)
+```
+
+```{r}
+iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
+colnames(iq_preds) = c("year", "week_of_year", "actual", "predicted")
+iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables Only")
+```
+
+## With Lagged Temperature, Humidity, and Precipitation
+
+### San Juan
+
+```{r}
+set.seed(98)
+test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
+train <- anti_join(sj_data_for_model, test)
+
+set.seed(97)
+sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+sj_model
+set.seed(81)
+sj_model <- train(total_cases ~ ., data = sj_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+sj_model
+
+predictions <- predict(sj_model, test)
+RMSE(predictions - test$total_cases)
+```
+
+```{r}
+sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
+colnames(sj_preds) = c("year", "week_of_year", "actual", "predicted")
+sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Climate Variables with Lags")
+```
+
+### Iquitos
+
+```{r}
+set.seed(76)
+test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
+train <- anti_join(iq_data_for_model, test)
+
+set.seed(93)
+iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
+iq_model
+set.seed(82)
+iq_model <- train(total_cases ~ ., data = iq_data_for_model, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
+iq_model
+
+predictions <- predict(iq_model, test)
+RMSE(predictions - test$total_cases)
+```
+
+```{r}
+iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
+colnames(iq_preds) = c("year", "week_of_year", "actual", "predicted")
+iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
+
+ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables with Lags")
+```
+
+# Conclusion

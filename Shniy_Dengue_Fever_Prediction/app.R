@@ -13,6 +13,7 @@
 library(shiny)
 library(shinydashboard)
 library(caret)
+library(tidyverse)
 
 # load data which constructs random forest model
 #sj_data_for_model <- read.csv("sj_data_for_model.csv")
@@ -110,17 +111,14 @@ ui <- dashboardPage(
 
 server <- function(input, output, session) {
   
-  sj_data_for_model <- read.csv("sj_data_for_model.csv")
-  
-  output$our_sj_table <- renderDataTable({sj_data_for_model})
+  sj_data_for_model <- read.csv("sj_data_for_model.csv") %>% select(-X)
   
   sj_model <- train(total_cases ~ ., 
                     data = sj_data_for_model, 
-                     method = "rf", 
-                     trControl =  trainControl(method = "oob"), 
-                     ntree = 500, 
-                     tuneGrid = data.frame(mtry = 1:12), 
-                     importance = TRUE)
+                    method = "rf", 
+                    trControl =  trainControl(method = "oob"), 
+                    ntree = 500, tuneGrid = data.frame(mtry = 2), 
+                    importance = TRUE)
   
   values <- reactiveValues()
   
@@ -148,6 +146,10 @@ server <- function(input, output, session) {
   
   # impute missing values in values$DT
   #values$DT <- preProcess(values$DT)
+  
+  predictions <- predict(sj_model, values$DT)
+  
+  input_with_preds <- rbind(values$DT, predictions)
   
   output$prediction_table <- renderDataTable(values$DT)
   
