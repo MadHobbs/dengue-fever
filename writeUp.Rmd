@@ -1,0 +1,78 @@
+---
+title: "Predicting cases of dengue feaver based on evnivornemtnal data using a random forest model."
+author: "Madison Hobbs and Jenn Havens"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r loadData, echo = F , warning=FALSE, include=FALSE}
+
+knitr::opts_chunk$set(echo = F, message=FALSE, warning=FALSE, cache=TRUE, 
+                      fig.width=7, fig.height=4, fig.align = "center")
+
+
+require(rpart)
+require(caret)
+require(ggcorrplot)
+library(RANN)
+library(dplyr)
+library(ggcorrplot)
+library(lubridate)
+
+TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
+
+TrainPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Features.csv")
+TrainResp <- read.csv("./DengAI_Predicting_Disease_Spread_-_Training_Data_Labels.csv")
+
+TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"))
+
+
+```
+
+##Introduction:
+Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Patterns of cases known in advance can used as an early warning system to help local authorities prepare for unusually high number of cases as well as informing which areas may need the most outside assistance.
+
+
+##The Model
+We created two (2) predictive models, one for each of the cities, San Juan, Puerto Rico and Iquitos, Peru. Our model is a random forest algorithm which was trained on data from each city individually. 
+
+
+### Missing Values:
+
+We impute missing values using imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. "
+
+
+```{r bagToFillNAs}
+set.seed(6)
+impTrainFull <- preProcess(TrainFull, "bagImpute")
+TrainFull_noNA <- predict(impTrainFull, TrainFull)
+```
+
+# Variable Selection
+
+## Temperature
+
+We think that the station-measured temperature would be preferable, because these are not measured from satellite or estimated from a model. 
+
+We should also think about whether to choose minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant.
+
+
+```{r tempCor, echo=F}
+temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c) 
+
+corr_matrix <- cor(temps)
+corr_pmat <- cor_pmat(temps)
+# they are all significantly correlated 
+#all(corr_pmat < 0.05)
+```
+
+In fact, all pairwise correlations between the four measures of temperature are significant. We can see these strong correlations represented in the correlation plot below:
+
+
+```{r tempCorPlot}
+ggcorrplot(corr_matrix, hc.order = TRUE)
+```
+
+
+Because of this correlation and because [past studies](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) have found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant, we want to use just mean temperature for all of the correlated temperature variables.
+
