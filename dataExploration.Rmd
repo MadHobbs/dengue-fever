@@ -10,7 +10,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE, 
                       fig.width=7, fig.height=4, fig.align = "center")
 
-#require(tidyverse)
+require(tidyverse)
 require(rpart)
 require(caret)
 require(ggcorrplot)
@@ -18,7 +18,7 @@ library(RANN)
 library(dplyr)
 library(ggcorrplot)
 library(lubridate)
-#library(hydroGOF)
+library(hydroGOF)
 
 TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
 
@@ -288,6 +288,7 @@ We'll assess our model's performance by computing the error (MSE) between the mo
 ## San Juan
 
 ```{r}
+set.seed(91)
 step <- 30
 predictions <- rep(NA, step)
 
@@ -329,6 +330,7 @@ ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 ## Iquitos
 
 ```{r}
+set.seed(54)
 step <- 30
 predictions <- rep(NA, step)
 
@@ -372,18 +374,24 @@ ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 ### San Juan 
 
 ```{r}
+set.seed(44)
 test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
 train <- anti_join(sj_data_for_model, test)
 
-set.seed(92)
+set.seed(91)
 sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
 sj_model
-set.seed(82)
-sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+set.seed(45)
+sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 2), importance = TRUE)
 sj_model
 
 predictions <- predict(sj_model, test)
+
+#RMSE
 RMSE(predictions - test$total_cases)
+
+#nrmse
+nrmse(predictions, test$total_cases)
 ```
 
 ```{r}
@@ -410,6 +418,8 @@ iq_model
 
 predictions <- predict(iq_model, test)
 RMSE(predictions - test$total_cases)
+
+nrmse(predictions, test$total_cases)
 ```
 
 ```{r}
@@ -425,14 +435,14 @@ ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_p
 ### San Juan
 
 ```{r}
-set.seed(98)
+set.seed(44)
 test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
 train <- anti_join(sj_data_for_model, test)
 
-set.seed(97)
+set.seed(91)
 sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 sj_model
-set.seed(81)
+set.seed(45)
 sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 10), importance = TRUE)
 sj_model
 
@@ -441,6 +451,8 @@ save(sj_model, file = "sj_model.rda")
 
 predictions <- predict(sj_model, test)
 RMSE(predictions - test$total_cases)
+
+nrmse(predictions, test$total_cases)
 ```
 
 When taking ndvi out of the model, the RMSE rises to 24.66074. 
@@ -456,14 +468,14 @@ ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_p
 ### Iquitos
 
 ```{r}
-set.seed(76)
+set.seed(44)
 test <- sample_n(iq_data_for_model, 0.1*length(iq_data_for_model$total_cases))
 train <- anti_join(iq_data_for_model, test)
 
-set.seed(91)
+set.seed(54)
 iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 iq_model
-set.seed(84)
+set.seed(45)
 iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
 iq_model
 
@@ -472,6 +484,7 @@ save(iq_model, file = "iq_model.rda")
 
 predictions <- predict(iq_model, test)
 RMSE(predictions - test$total_cases)
+nrmse(predictions, test$total_cases)
 ```
 
 ```{r}
