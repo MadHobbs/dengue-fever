@@ -19,6 +19,12 @@ library(dplyr)
 library(rwunderground)
 library(httr)
 library(curl)
+#library(XML)
+#library(gridExtra)
+#library(rappdirs)
+#library(xml2)
+#library(hoardr)
+#library(rnoaa)
 
 lag_num_weeks <- 12
 
@@ -40,35 +46,10 @@ SJ_sw <- 0.16597
 SJ_se <- 0.17719
 
 
-todayDate <- format(Sys.Date(), "%Y%m%d")
-lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
-
-SJlocation <- set_location(airport_code = "TJSJ")
-IQlocation <- set_location(airport_code = "IQT")
-
-dayDataSJ <- history_daily(location = SJlocation, date = todayDate, use_metric = T)
-lagDataSJ <- history_daily(location = SJlocation, date = lagDate, use_metric = T)
-
-dayTempSJ <- dayDataSJ$mean_temp
-dayHumidSJ <- sum(dayDataSJ$min_humid, dayDataSJ$max_humid)/2
-dayPrecipSJ <- 10*(dayDataSJ$precip)
-
-precipLagSJ <- lagDataSJ$mean_temp
-tempLagSJ <- sum(lagDataSJ$min_humid, dayDataSJ$max_humid)/2
-humidLagSJ <- 10*(lagDataSJ$precip)
-
-dayDataIQ <- history_daily(location = IQlocation, date = todayDate, use_metric = T)
-lagDataIQ <- history_daily(location = IQlocation, date = lagDate, use_metric = T)
-
-dayTempIQ <- dayDataIQ$mean_temp
-dayHumidIQ <- sum(dayDataIQ$min_humid, dayDataIQ$max_humid)/2
-dayPrecipIQ <- 10*(dayDataIQ$precip)
-
-precipLagIQ <- lagDataIQ$mean_temp
-tempLagIQ <- sum(lagDataIQ$min_humid, dayDataIQ$max_humid)/2
-humidLagIQ <- 10*(lagDataIQ$precip)
+computerToday <- format(Sys.Date(), "%Y%m%d")
 
 
+#ghcnd(stationid = "SPQT")
 
 
 #shiny app
@@ -113,8 +94,11 @@ ui <- dashboardPage(
                 
                 sidebarPanel(
                 checkboxGroupInput("which_city", label = h3("Which City?"), 
-                                     choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Today" = "sj2", "Iquitos, Ecuador: Today" = "iq2" ), 
+                                     choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Ecuador: Entered Date" = "iq2" ), 
                                      selected = 0),
+                numericInput(inputId = "now", 
+                             label = "Date of preditction", 
+                             value = computerToday, min = 0),
                 numericInput(inputId = "precipitation_amt_mm", 
                              label = "Week's Total Precipitation (mm)", 
                              value = 0, min = 0), 
@@ -194,6 +178,7 @@ server <- function(input, output, session) {
   newEntry <- observeEvent(input$addrow, {
     preds <- c
     if(input$which_city == "sj" | input$which_city == "iq") {
+      
       newLine <- data.frame(
         precipitation_amt_mm = input$precipitation_amt_mm,
         precip_lag = input$precip_lag,
@@ -208,6 +193,31 @@ server <- function(input, output, session) {
     }
     
     else if(input$which_city == "sj2") {
+      print(input$now)
+      
+      todayDate <- base::format(input$now, "%Y%m%d")
+      print(todayDate)
+      lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+      print("hi dates")
+      print(lagDate)
+      
+      SJlocation <- set_location(airport_code = "TJSJ")
+      
+      dayDataSJ <- history_daily(location = SJlocation, date = todayDate, use_metric = T)
+      lagDataSJ <- history_daily(location = SJlocation, date = lagDate, use_metric = T)
+      
+      print("got data")
+      
+      dayTempSJ <- dayDataSJ$mean_temp
+      dayHumidSJ <- sum(dayDataSJ$min_humid, dayDataSJ$max_humid)/2
+      dayPrecipSJ <- 10*(dayDataSJ$precip)
+      
+      tempLagSJ  <- lagDataSJ$mean_temp
+      humidLagSJ <- sum(lagDataSJ$min_humid, lagDataSJ$max_humid)/2
+      precipLagSJ <- 10*(lagDataSJ$precip)
+      
+      print("saved data points")
+      
       newLine <- data.frame(
         precipitation_amt_mm = dayPrecipSJ,
         precip_lag = precipLagSJ,
@@ -221,6 +231,22 @@ server <- function(input, output, session) {
         ndvi_sw = SJ_sw)
     }
     else if(input$which_city == "iq2") {
+      todayDate <- format(computerToday, "%Y%m%d")
+      lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+      
+      IQlocation <- set_location(airport_code = "IQT")
+      
+      dayDataIQ <- history_daily(location = IQlocation, date = todayDate, use_metric = T)
+      lagDataIQ <- history_daily(location = IQlocation, date = lagDate, use_metric = T)
+      
+      dayTempIQ <- dayDataIQ$mean_temp
+      dayHumidIQ <- sum(dayDataIQ$min_humid, dayDataIQ$max_humid)/2
+      dayPrecipIQ <- 10*(dayDataIQ$precip)
+      
+      tempLagIQ <- lagDataIQ$mean_temp
+      humidLagIQ <- sum(lagDataIQ$min_humid, lagDataIQ$max_humid)/2
+      precipLagIQ <- 10*(lagDataIQ$precip)
+      
       newLine <- data.frame(
         precipitation_amt_mm = dayPrecipIQ,
         precip_lag = precipLagIQ,
