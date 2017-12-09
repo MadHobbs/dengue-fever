@@ -97,7 +97,7 @@ ui <- dashboardPage(
                                      choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Ecuador: Entered Date" = "iq2" ), 
                                      selected = 0),
                 numericInput(inputId = "now", 
-                             label = "Date of preditction", 
+                             label = "Date of preditction (YYYYMMDD)", 
                              value = computerToday, min = 0),
                 numericInput(inputId = "precipitation_amt_mm", 
                              label = "Week's Total Precipitation (mm)", 
@@ -193,30 +193,26 @@ server <- function(input, output, session) {
     }
     
     else if(input$which_city == "sj2") {
-      print(input$now)
+      todayDate <-input$now
+      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(1), "%Y%m%d")
+      lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+      starWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-weeks(1), "%Y%m%d")
       
-      todayDate <- base::format(input$now, "%Y%m%d")
-      print(todayDate)
-      lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
-      print("hi dates")
-      print(lagDate)
+      SJlocation <- set_location(airport_code = "SJT")
       
-      SJlocation <- set_location(airport_code = "TJSJ")
+      dayDataSJ <- history_range(location = SJlocation, startWeek, as.character(todayDate), use_metric = T)
+      lagDataSJ <- history_range(location = SJlocation, starWeekLag, lagDate, use_metric = T)
       
-      dayDataSJ <- history_daily(location = SJlocation, date = todayDate, use_metric = T)
-      lagDataSJ <- history_daily(location = SJlocation, date = lagDate, use_metric = T)
+      dayDataSJ[is.na(dayDataSJ)] <- 0
+      lagDataSJ[is.na(lagDataSJ)] <- 0
       
-      print("got data")
+      dayTempSJ <- mean(dayDataSJ$temp)
+      dayHumidSJ <- mean(dayDataSJ$hum)
+      dayPrecipSJ <- 10*sum(dayDataSJ$precip)
       
-      dayTempSJ <- dayDataSJ$mean_temp
-      dayHumidSJ <- sum(dayDataSJ$min_humid, dayDataSJ$max_humid)/2
-      dayPrecipSJ <- 10*(dayDataSJ$precip)
-      
-      tempLagSJ  <- lagDataSJ$mean_temp
-      humidLagSJ <- sum(lagDataSJ$min_humid, lagDataSJ$max_humid)/2
-      precipLagSJ <- 10*(lagDataSJ$precip)
-      
-      print("saved data points")
+      tempLagSJ <- mean(lagDataSJ$temp)
+      humidLagSJ <- mean(lagDataSJ$hum)
+      precipLagSJ <- 10*sum(lagDataSJ$precip)
       
       newLine <- data.frame(
         precipitation_amt_mm = dayPrecipSJ,
@@ -231,21 +227,30 @@ server <- function(input, output, session) {
         ndvi_sw = SJ_sw)
     }
     else if(input$which_city == "iq2") {
-      todayDate <- format(computerToday, "%Y%m%d")
-      lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+      todayDate <-input$now
+      print(todayDate)
+      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(1), "%Y%m%d")
+      print(startWeek)
+      lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+      print(lagDate)
+      startWeekLag <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks+1), "%Y%m%d")
+      print(startWeekLag)
       
       IQlocation <- set_location(airport_code = "IQT")
       
-      dayDataIQ <- history_daily(location = IQlocation, date = todayDate, use_metric = T)
-      lagDataIQ <- history_daily(location = IQlocation, date = lagDate, use_metric = T)
+      dayDataIQ <- history_range(location = IQlocation, startWeek, as.character(todayDate), use_metric = T)
+      lagDataIQ <- history_range(location = IQlocation, startWeekLag, lagDate, use_metric = T)
       
-      dayTempIQ <- dayDataIQ$mean_temp
-      dayHumidIQ <- sum(dayDataIQ$min_humid, dayDataIQ$max_humid)/2
-      dayPrecipIQ <- 10*(dayDataIQ$precip)
+      dayDataIQ[is.na(dayDataIQ)] <- 0
+      lagDataIQ[is.na(lagDataIQ)] <- 0
       
-      tempLagIQ <- lagDataIQ$mean_temp
-      humidLagIQ <- sum(lagDataIQ$min_humid, lagDataIQ$max_humid)/2
-      precipLagIQ <- 10*(lagDataIQ$precip)
+      dayTempIQ <- mean(dayDataIQ$temp)
+      dayHumidIQ <- mean(dayDataIQ$hum)
+      dayPrecipIQ <- 10*sum(dayDataIQ$precip)
+      
+      tempLagIQ <- mean(lagDataIQ$temp)
+      humidLagIQ <- mean(lagDataIQ$hum)
+      precipLagIQ <- 10*sum(lagDataIQ$precip)
       
       newLine <- data.frame(
         precipitation_amt_mm = dayPrecipIQ,
