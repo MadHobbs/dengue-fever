@@ -194,9 +194,9 @@ server <- function(input, output, session) {
     
     else if(input$which_city == "sj2") {
       todayDate <-input$now
-      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(1), "%Y%m%d")
+      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-days(5), "%Y%m%d")
       lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
-      starWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-weeks(1), "%Y%m%d")
+      starWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-days(5), "%Y%m%d")
       
       SJlocation <- set_location(airport_code = "SJT")
       
@@ -229,11 +229,11 @@ server <- function(input, output, session) {
     else if(input$which_city == "iq2") {
       todayDate <-input$now
       print(todayDate)
-      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(1), "%Y%m%d")
+      startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-days(5), "%Y%m%d")
       print(startWeek)
       lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
       print(lagDate)
-      startWeekLag <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks+1), "%Y%m%d")
+      startWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-days(5), "%Y%m%d")
       print(startWeekLag)
       
       IQlocation <- set_location(airport_code = "IQT")
