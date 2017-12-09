@@ -10,7 +10,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, cache=TRUE, 
                       fig.width=7, fig.height=4, fig.align = "center")
 
-require(tidyverse)
+#require(tidyverse)
 require(rpart)
 require(caret)
 require(ggcorrplot)
@@ -18,7 +18,7 @@ library(RANN)
 library(dplyr)
 library(ggcorrplot)
 library(lubridate)
-library(hydroGOF)
+#library(hydroGOF)
 
 TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
 
@@ -86,6 +86,9 @@ ggplot(data = TrainFullTest) + geom_point(aes(x=season, y=total_cases)) + facet_
 ggplot(data = TrainFullTest) + geom_point(aes(x=weekofyear, y=total_cases)) + facet_grid(city~.)
 
 ggplot(data = TrainFullTest) + geom_point(aes(x=week_start_date, y=total_cases)) + facet_grid(city~.)
+
+
+ggplot(data = TrainFullTest) + geom_point(aes(x=week_start_date, y=ndvi_sw)) + facet_grid(city~.)
 
 
 ```

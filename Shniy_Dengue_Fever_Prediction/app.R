@@ -13,11 +13,65 @@
 library(shiny)
 library(shinydashboard)
 library(caret)
-library(tidyverse)
+#library(tidyverse)
+#library(mnormt)
+library(dplyr)
+library(rwunderground)
+library(httr)
+library(curl)
+
+lag_num_weeks <- 12
+
+set_api_key("a483d97cf372d5c9")
 
 load(file = "sj_model.rda",.GlobalEnv)
 load(file = "iq_model.rda",.GlobalEnv)
 
+
+#get default values
+IQ_ne <- 0.26364
+IQ_nw <- 0.23297
+IQ_se <- 0.24980
+IQ_sw <- 0.26214
+
+SJ_ne <- 0.05770
+SJ_nw <- 0.06808
+SJ_sw <- 0.16597
+SJ_se <- 0.17719
+
+
+todayDate <- format(Sys.Date(), "%Y%m%d")
+lagDate <- format(as.Date(todayDate, format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
+
+SJlocation <- set_location(airport_code = "TJSJ")
+IQlocation <- set_location(airport_code = "IQT")
+
+dayDataSJ <- history_daily(location = SJlocation, date = todayDate, use_metric = T)
+lagDataSJ <- history_daily(location = SJlocation, date = lagDate, use_metric = T)
+
+dayTempSJ <- dayDataSJ$mean_temp
+dayHumidSJ <- sum(dayDataSJ$min_humid, dayDataSJ$max_humid)/2
+dayPrecipSJ <- 10*(dayDataSJ$precip)
+
+precipLagSJ <- lagDataSJ$mean_temp
+tempLagSJ <- sum(lagDataSJ$min_humid, dayDataSJ$max_humid)/2
+humidLagSJ <- 10*(lagDataSJ$precip)
+
+dayDataIQ <- history_daily(location = IQlocation, date = todayDate, use_metric = T)
+lagDataIQ <- history_daily(location = IQlocation, date = lagDate, use_metric = T)
+
+dayTempIQ <- dayDataIQ$mean_temp
+dayHumidIQ <- sum(dayDataIQ$min_humid, dayDataIQ$max_humid)/2
+dayPrecipIQ <- 10*(dayDataIQ$precip)
+
+precipLagIQ <- lagDataIQ$mean_temp
+tempLagIQ <- sum(lagDataIQ$min_humid, dayDataIQ$max_humid)/2
+humidLagIQ <- 10*(lagDataIQ$precip)
+
+
+
+
+#shiny app
 ui <- dashboardPage(
   
   dashboardHeader(title = "Predicting Dengue"),
@@ -59,7 +113,7 @@ ui <- dashboardPage(
                 
                 sidebarPanel(
                 checkboxGroupInput("which_city", label = h3("Which City?"), 
-                                     choices = list("San Juan, Puerto Rico" = "sj", "Iquitos, Ecuador" = "iq"), 
+                                     choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Today" = "sj2", "Iquitos, Ecuador: Today" = "iq2" ), 
                                      selected = 0),
                 numericInput(inputId = "precipitation_amt_mm", 
                              label = "Week's Total Precipitation (mm)", 
@@ -135,19 +189,51 @@ server <- function(input, output, session) {
     ndvi_sw =  NA,
     stringsAsFactors = FALSE)
   
+
+  
   newEntry <- observeEvent(input$addrow, {
     preds <- c
-    newLine <- data.frame(
-      precipitation_amt_mm = input$precipitation_amt_mm,
-      precip_lag = input$precip_lag,
-      station_avg_temp_c = input$station_avg_temp_c,
-      temp_lag = input$temp_lag,
-      relative_humidity_percent = input$relative_humidity_percent,
-      humidity_lag = input$humidity_lag,
-      ndvi_ne = input$ndvi_ne,
-      ndvi_nw = input$ndvi_nw,
-      ndvi_se = input$ndvi_se,
-      ndvi_sw = input$ndvi_sw)
+    if(input$which_city == "sj" | input$which_city == "iq") {
+      newLine <- data.frame(
+        precipitation_amt_mm = input$precipitation_amt_mm,
+        precip_lag = input$precip_lag,
+        station_avg_temp_c = input$station_avg_temp_c,
+        temp_lag = input$temp_lag,
+        relative_humidity_percent = input$relative_humidity_percent,
+        humidity_lag = input$humidity_lag,
+        ndvi_ne = input$ndvi_ne,
+        ndvi_nw = input$ndvi_nw,
+        ndvi_se = input$ndvi_se,
+        ndvi_sw = input$ndvi_sw)
+    }
+    
+    else if(input$which_city == "sj2") {
+      newLine <- data.frame(
+        precipitation_amt_mm = dayPrecipSJ,
+        precip_lag = precipLagSJ,
+        station_avg_temp_c = dayTempSJ,
+        temp_lag = tempLagSJ,
+        relative_humidity_percent = dayHumidSJ,
+        humidity_lag = humidLagSJ,
+        ndvi_ne = SJ_ne,
+        ndvi_nw = SJ_nw,
+        ndvi_se = SJ_se,
+        ndvi_sw = SJ_sw)
+    }
+    else if(input$which_city == "iq2") {
+      newLine <- data.frame(
+        precipitation_amt_mm = dayPrecipIQ,
+        precip_lag = precipLagIQ,
+        station_avg_temp_c = dayTempIQ,
+        temp_lag = tempLagIQ,
+        relative_humidity_percent = dayHumidIQ,
+        humidity_lag = humidLagIQ,
+        ndvi_ne = IQ_ne,
+        ndvi_nw = IQ_nw,
+        ndvi_se = IQ_se,
+        ndvi_sw = IQ_sw)
+    }
+
     
     if(input$which_city == "sj") {
       newPredLine <- c(predict(sj_model, newLine), input$which_city, 
@@ -163,6 +249,20 @@ server <- function(input, output, session) {
                        input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
                        input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
     }
+    else if (input$which_city == "iq2"){
+      newPredLine <- c(predict(iq_model, newLine), "iq", 
+                       dayPrecipIQ, 
+                       precipLagIQ, dayTempIQ,
+                       tempLagIQ, dayHumidIQ, humidLagIQ,
+                       IQ_ne, IQ_nw, IQ_se, IQ_sw)
+    }
+    else if (input$which_city == "sj2"){
+      newPredLine <- c(predict(sj_model, newLine), "sj", 
+                       dayPrecipSJ, 
+                       precipLagSJ, dayTempSJ,
+                       tempLagSJ, dayHumidSJ, humidLagSJ,
+                       SJ_ne, SJ_nw, SJ_se, SJ_sw)
+    }
     else {
       newPredLine <- c()
     }
@@ -175,7 +275,7 @@ server <- function(input, output, session) {
     pred_values$DT <- deleteLine
   })
   
-  output$predictions <- renderDataTable({pred_values$DT})
+  output$predictions <- renderDataTable({pred_values$DT}, options = list(scrollX = TRUE))
 }
 
 shinyApp(ui = ui, server = server)
