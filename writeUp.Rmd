@@ -44,18 +44,20 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 ```
 
 ##Introduction:
-Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Patterns of cases known in advance can used as an early warning system to help local authorities prepare for unusually high number of cases as well as informing which areas may need the most outside assistance.
+Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Patterns of cases known in advance can used as an early warning system to help local authorities prepare for unusually high numbers of cases as well as informing which areas may need the most outside assistance.
 
 
 ##The Model
-We created two (2) predictive models, one for each of the cities, San Juan, Puerto Rico and Iquitos, Peru. Our model is a random forest algorithm which was trained on data from each city individually. 
+We created two (2) predictive models, one for each of the cities of interest: San Juan, Puerto Rico and Iquitos, Perú. Our model is a random forest algorithm which was trained on data from each city individually. 
 
 
 ### Missing Values:
 
-We impute missing values using imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. "
+We impute missing values using imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. " Luckily, it doesn't take too long for bagging to impute the relatively few misssing values on our data.
 
 ```{r bagToFillNAs}
+sum(is.na(TrainFull))
+
 set.seed(6)
 impTrainFull <- preProcess(TrainFull, "bagImpute")
 TrainFull_noNA <- predict(impTrainFull, TrainFull)
