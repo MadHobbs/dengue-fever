@@ -242,7 +242,7 @@ RMSE <- function(error)
 
 ## San Juan
 
-###Testing with current environemntal data, lagged environemntal data and date information
+###Testing with current environemntal data, lagged environmental data, and date information
 
 ```{r buildWallSJ}
 step <- 30
@@ -273,6 +273,8 @@ MAE(predicted - actual)
 # ranges from 0 to 100, scaled to data
 nrmse(predicted, actual)
 ```
+
+
 
 ```{r testWallSJ}
 sj_prospective_preds <- data.frame(sj_data_for_model$year[31:length(sj_data_for_model$total_cases)], sj_data_for_model$week_of_year[31:length(sj_data_for_model$total_cases)], actual, predicted)
