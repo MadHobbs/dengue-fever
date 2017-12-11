@@ -53,11 +53,16 @@ We created two (2) predictive models, one for each of the cities of interest: Sa
 
 ### Missing Values:
 
-We impute missing values using imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. " Luckily, it doesn't take too long for bagging to impute the relatively few misssing values on our data.
+First, we ask how many values in our data are NA?
+
+```{r howManyNA}
+# what percentage of data is NA?
+round(sum(is.na(TrainFull))/(dim(TrainFull)[1]*dim(TrainFull)[2]), 3)
+```
+
+Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. " Luckily, it doesn't take too long for bagging to impute the relatively few misssing values on our data.
 
 ```{r bagToFillNAs}
-sum(is.na(TrainFull))
-
 set.seed(6)
 impTrainFull <- preProcess(TrainFull, "bagImpute")
 TrainFull_noNA <- predict(impTrainFull, TrainFull)
@@ -67,10 +72,9 @@ TrainFull_noNA <- predict(impTrainFull, TrainFull)
 
 ## Temperature
 
-We think that the station-measured temperature would be preferable, because these are not measured from satellite or estimated from a model. 
+We think that the station-measured temperature would be preferable, because these are not measured from satellite or estimated from a model. The [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov) also notes in their reference guide, "Environmental data sources for the Dengue Project," that, "Ground observations are generally an optimal representation of actual local conditions." 
 
 We should also think about whether to choose minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant.
-
 
 ```{r tempCor, echo=F}
 temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c) 
@@ -90,8 +94,7 @@ corrplot(corr_matrix, method = "color")
 ```
 
 
-Because of this correlation and because [past studies](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) have found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant, we want to use just mean temperature for all of the correlated temperature variables.
-
+Because of this correlation and because [past studies](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) have found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant, we will proceed with mean temperature as the only temperature variable.
 
 ## Precipitation
 
@@ -101,22 +104,20 @@ There are three measures of precipitation. One is station_precip_mm which is the
 
 We should choose one of these precipitation  measures for the model, since these four precipitation measures all measure approximately the same thing. According to the [NOAA Dengue Forecasting recommendations](http://dengueforecasting.noaa.gov),  "remotely sensed observations are generally an excellent observation of precipitation and vegetation conditions for a location." With the multiple sources for total precipitation, we decide to use only the satellite measured total precipitation for each city to build our model.
 
+### Humidity and Dewpoint
 
-### Which Air Temperature Measures Should Be Included?
-
-Note that Choi et. al say : "Mean temperature was significantly associated with dengue incidence in all three provinces, but incidence did not correlate well with maximum temperature in Banteay Meanchey, nor with minimum temperature in Kampong Thom at a lag of three months in the negative binomial model." I'm inclined to only use mean temperature. 
-
-### Should humidity and Dewpoint be included?
-
-Specific humidity, relative humidity, and dew point are all provided and are all measured using NOAA's NCEP Climate Forecast System Reanalysis. All three measures are significantly correlated, as seen below.
+Specific humidity, relative humidity, and dew point are all provided and are all measured using [NOAA's NCEP Climate Forecast System Reanalysis](https://climatedataguide.ucar.edu/climate-data/climate-forecast-system-reanalysis-cfsr). All three measures are significantly correlated, as seen below.
 
 ```{r}
 humids <- TrainFull_noNA %>% select(reanalysis_relative_humidity_percent, reanalysis_specific_humidity_g_per_kg, reanalysis_dew_point_temp_k) 
 
 corr_matrix <- cor(humids)
 corr_pmat <- cor_pmat(humids)
+
+corr_pmat
+
 # they are all significantly correlated 
-all(corr_pmat < 0.05)
+#all(corr_pmat < 0.05)
 
 #ggcorrplot(corr_matrix, hc.order = TRUE)
 corrplot(corr_matrix, method = "color")
@@ -126,13 +127,13 @@ corrplot(corr_matrix, method = "color")
 
 Since these measure roughly the same information, we opt to include only one in our model. Relative humidity is the measure most often used in literature we have read. It is also an easy-to-find measure, making our model more user-friendly. Therefore, we use only relative humidity in the model.
 
-## Creating Data for Model and Lagged Data
+## Creating Lagged Data
 
 We separate San Juan and Iquitos data to produce two models, one to predict weekly dengue fever cases in San Juan and the other in Iquitos. This is because weather and vegetation will behave differently in relation to time between both locations, because these are locations separated by distance, climate, and ecosystem. 
 
 At the same time, we create two lag variables for each site: temperature lag and precipitation lag. The lagged temperature and precipitation variables record, respectively, what the temperature or precipitation was 12 weeks prior for the observation at hand. 
 
-Time laged environmental variables [have been shown to be a signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature and relative humidity. 
+Time laged environmental variables [have been shown to be a signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature, precipitation, and relative humidity. 
 
 ```{r makeTimeLags}
 lag_num_weeks = 12
@@ -212,11 +213,11 @@ sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofye
 
 ## Model Evaluation
 
-A [time series Random Forest model](https://link.springer.com/article/10.1186/1471-2105-15-276) was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the last 30 weeks to predict for the next week. The simulation steps forward interativly adding new data for each week, the new model using the updated datat to predict the next week, and comparing to the true number of cases.
+A [time series Random Forest model](https://link.springer.com/article/10.1186/1471-2105-15-276) was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward interatively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
-We'll assess our model's performance by computing the error (MSE) between the model's predicted number of cases and the actual number of cases for each week. The Driven Data team uses Mean Absolute Error to measure error, so we will, too.
+We'll assess our model's performance by computing the error (root mean squared error) between the model's predicted number of cases and the actual number of cases for each week. The Driven Data team uses mean absolute error to assess models, so we will, too.
 
 ```{r errorRateFunctions}
 # returns Mean Absolute Error
@@ -239,7 +240,7 @@ RMSE <- function(error)
 
 ###Testing with current environemntal data, lagged environemntal data and date information
 
-```{r biuldWallSJ}
+```{r buildWallSJ}
 step <- 30
 predictions <- rep(NA, step)
 
