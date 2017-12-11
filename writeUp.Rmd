@@ -213,7 +213,11 @@ sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofye
 
 ## Model Evaluation
 
-A [time series Random Forest model](https://link.springer.com/article/10.1186/1471-2105-15-276) was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward interatively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
+Michael J. Kane et. al compared a time series Random Forest model and an ARIMA model to predict avian influenza H5N1 cases, detailed in their [paper](https://link.springer.com/article/10.1186/1471-2105-15-276). They found that a Random Forest time series model with time lag variables out-performed the prospective ARIMA model in predicting H5N1 cases per week in Egypt.
+
+To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
+
+Inspired by their work, we was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward interatively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
@@ -248,9 +252,9 @@ index_to_predict = step + 1
 while(index_to_predict <= length(sj_data_for_model$total_cases)) {
 
   # use previous "step" number of weeks to build model
-  data <- slice(sj_data_for_model, (index_to_predict-step):(index_to_predict-1))
+  data <- slice(sj_data_for_model, 1:(index_to_predict-1))
   
-  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 100, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
   
   # predict on single observation:  the next week, the index_to_predict
   predicted_num_cases <- predict(model, slice(sj_data_for_model, index_to_predict))
