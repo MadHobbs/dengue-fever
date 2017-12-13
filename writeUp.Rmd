@@ -43,15 +43,13 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 ```
 
-##Introduction:
-Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Patterns of cases known in advance can used as an early warning system to help local authorities prepare for unusually high numbers of cases as well as informing which areas may need the most outside assistance.
-
+#Introduction:
+Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Patterns of cases known in advance can used as an early warning system to help local authorities prepare for unusually high numbers of cases as well as informing which areas may need the most outside assistance. DrivinData is hosting a compatition: [DengAI: Predicting Disease Spread](https://www.drivendata.org/competitions/44/dengai-predicting-disease-spread/), to predict cases of dengue fever in San Juan, Puerto Rico and Iquitos,Peru.  
 
 ##The Model
-We created two (2) predictive models, one for each of the cities of interest: San Juan, Puerto Rico and Iquitos, Perú. Our model is a random forest algorithm which was trained on data from each city individually. 
+We created two (2) predictive models, one for each of the cities of interest: San Juan and Iquitos. Our model is a random forest algorithm which was trained on data from each city individually. The explanatory variables are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (ndvi). We also considered time of year as a possible variable. The environemntal training data was collected from the US National Oceanic and Atmospheric Administration (NOAA) and the health data (ie cases of dengue fever reported) from the US Centers for Disease Control and Prevention (CDC).
 
-
-### Missing Values:
+## Missing Values:
 
 First, we ask how many values in our data are NA?
 
@@ -60,7 +58,7 @@ First, we ask how many values in our data are NA?
 round(sum(is.na(TrainFull))/(dim(TrainFull)[1]*dim(TrainFull)[2]), 3)
 ```
 
-Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. " Luckily, it doesn't take too long for bagging to impute the relatively few misssing values on our data.
+Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their documentation: " Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost. " Luckily, it doesn't take too long for bagging to impute the relatively few missing values on our data.
 
 ```{r bagToFillNAs}
 set.seed(6)
@@ -104,7 +102,7 @@ There are three measures of precipitation. One is station_precip_mm which is the
 
 We should choose one of these precipitation  measures for the model, since these four precipitation measures all measure approximately the same thing. According to the [NOAA Dengue Forecasting recommendations](http://dengueforecasting.noaa.gov),  "remotely sensed observations are generally an excellent observation of precipitation and vegetation conditions for a location." With the multiple sources for total precipitation, we decide to use only the satellite measured total precipitation for each city to build our model.
 
-### Humidity and Dewpoint
+## Humidity and Dewpoint
 
 Specific humidity, relative humidity, and dew point are all provided and are all measured using [NOAA's NCEP Climate Forecast System Reanalysis](https://climatedataguide.ucar.edu/climate-data/climate-forecast-system-reanalysis-cfsr). All three measures are significantly correlated, as seen below.
 
@@ -127,13 +125,17 @@ corrplot(corr_matrix, method = "color")
 
 Since these measure roughly the same information, we opt to include only one in our model. Relative humidity is the measure most often used in literature we have read. It is also an easy-to-find measure, making our model more user-friendly. Therefore, we use only relative humidity in the model.
 
+## Normalized Difference Vegetation Index: NDVI
+
+NDVI is an indicator of vegetation by measuring the amount of live green plant material in an area as seen by satellite. [Past studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3855512/) have found that measures of vegetative indices are correlated with rates of dengue fever. It has been proposed that vegetation provides an environment for mosquitoes, vectors of dengue fever to lay eggs. Vegetation can also effect the temperature, precipitation, and humidity of micro-environments. We have used used the ndvi measured at the four points closest to the city's central point, one in each direction. 
+
 ## Creating Lagged Data
 
 We separate San Juan and Iquitos data to produce two models, one to predict weekly dengue fever cases in San Juan and the other in Iquitos. This is because weather and vegetation will behave differently in relation to time between both locations, because these are locations separated by distance, climate, and ecosystem. 
 
 At the same time, we create two lag variables for each site: temperature lag and precipitation lag. The lagged temperature and precipitation variables record, respectively, what the temperature or precipitation was 12 weeks prior for the observation at hand. 
 
-Time laged environmental variables [have been shown to be a signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature, precipitation, and relative humidity. 
+Time lagged environmental variables [have been shown to be a signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature, precipitation, and relative humidity. 
 
 ```{r makeTimeLags}
 lag_num_weeks = 12
@@ -211,13 +213,13 @@ sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofye
 ```
 
 
-## Model Evaluation
+# Model Evaluation
 
 Michael J. Kane et. al compared a time series Random Forest model and an ARIMA model to predict avian influenza H5N1 cases, detailed in their [paper](https://link.springer.com/article/10.1186/1471-2105-15-276). They found that a Random Forest time series model with time lag variables out-performed the prospective ARIMA model in predicting H5N1 cases per week in Egypt.
 
 To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
 
-Inspired by their work, we was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward interatively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
+Inspired by their work, we was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward iteratively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
@@ -442,3 +444,11 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables with Lags")
 ```
+
+# App and user prediction
+
+We created a user interface to get predictions based on the models developed above. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. They also have the option to enter a date and the weather data at that date and lagged data from will be collected from Weather Underground. 
+
+![](https://icons.wxug.com/logos/JPG/wundergroundLogo_4c_horz.jpg)
+
+The NDVI used in this prediction will be the average of the training data.  

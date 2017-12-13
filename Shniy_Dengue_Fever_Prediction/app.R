@@ -63,7 +63,9 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Our model", tabName = "our_model", icon = icon("world")),
       menuItem("Manually Input Data", tabName = "input_one_observation", icon = icon("hand-right", lib = "glyphicon")),
-      menuItem("Input Data Table", tabName = "input_df", icon = icon("table"))
+      menuItem("Input Data Table", tabName = "input_df", icon = icon("table")),
+      img(src="wundergroundLogo_4c_rev.png", align = "center", width = 200)
+      
     )
   ),
   dashboardBody(
@@ -73,7 +75,8 @@ ui <- dashboardPage(
       tabItem(tabName = "our_model",
               h2("Predicting Weekly Dengue Fever Cases"),
               h3("San Juan, Puerto Rico and Iquitos, Ecuador"),
-              dataTableOutput("our_sj_table")
+              dataTableOutput("our_sj_table"),
+              img(src="dengue.jpg", width = 500)
 
       ),
       # Second tab content
@@ -85,10 +88,11 @@ ui <- dashboardPage(
                  which will predict the number of Dengue Fever cases for 
                  a week with the conditions you enter. Our model was trained
                  on data from NOAA's Dengue Fever Prediction page (sourced through Driven Data). "),
-              h4("You must enter a value for all variables. For climate data,
-                  visit Weather Underground API. For the current Normalized Difference Vegetation
-                  Index (NDVI), 
-                  visit https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index"),
+              h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
+                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index). 
+                  For weather data vist NOAA or WeatherUnderground (https://www.wunderground.com/). Choosing the 'Entered Date' option will collect weather data from 
+                  WeatherUnderground.
+                 "),
               hr(),
               
               sidebarLayout(
@@ -96,7 +100,7 @@ ui <- dashboardPage(
                 sidebarPanel(
                 checkboxGroupInput("which_city", label = h3("Which City?"), 
                                      choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Ecuador: Entered Date" = "iq2" ), 
-                                     selected = 0),
+                                     selected = "sj"),
                 numericInput(inputId = "now", 
                              label = "Date of preditction (YYYYMMDD)", 
                              value = computerToday, min = 0),
@@ -229,14 +233,10 @@ server <- function(input, output, session) {
     }
     else if(input$which_city == "iq2") {
       todayDate <-input$now
-      print(todayDate)
       startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-days(5), "%Y%m%d")
-      print(startWeek)
       lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
-      print(lagDate)
       startWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-days(5), "%Y%m%d")
-      print(startWeekLag)
-      
+
       IQlocation <- set_location(airport_code = "IQT")
       
       dayDataIQ <- history_range(location = IQlocation, startWeek, as.character(todayDate), use_metric = T)
