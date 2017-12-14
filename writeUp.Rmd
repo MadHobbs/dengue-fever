@@ -74,7 +74,7 @@ We think that the station-measured temperature would be preferable, because thes
 
 We should also think about whether to choose minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant.
 
-```{r tempCor, echo=F}
+```{r tempCor, echo=F, include=F}
 temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c) 
 
 corr_matrix <- cor(temps)
@@ -92,7 +92,7 @@ corrplot(corr_matrix, method = "color")
 ```
 
 
-Because of this correlation and because [past studies](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) have found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant, we will proceed with mean temperature as the only temperature variable.
+Because of this correlation and because [a past study](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) have found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant, we will proceed with mean temperature as the only temperature variable.
 
 ## Precipitation
 
@@ -106,7 +106,7 @@ We should choose one of these precipitation  measures for the model, since these
 
 Specific humidity, relative humidity, and dew point are all provided and are all measured using [NOAA's NCEP Climate Forecast System Reanalysis](https://climatedataguide.ucar.edu/climate-data/climate-forecast-system-reanalysis-cfsr). All three measures are significantly correlated, as seen below.
 
-```{r}
+```{r, include=F}
 humids <- TrainFull_noNA %>% select(reanalysis_relative_humidity_percent, reanalysis_specific_humidity_g_per_kg, reanalysis_dew_point_temp_k) 
 
 corr_matrix <- cor(humids)
@@ -117,6 +117,9 @@ corr_pmat
 # they are all significantly correlated 
 #all(corr_pmat < 0.05)
 
+```
+
+```{r}
 #ggcorrplot(corr_matrix, hc.order = TRUE)
 corrplot(corr_matrix, method = "color")
 
@@ -283,7 +286,7 @@ The normalized Root-Mean Square Error of the model with current environmental da
 nrmse(predicted, actual)
 ```
 
-We can visualize how the predicted number of cases matches with the actual number of cases. 
+This is a relatively high error rate. We can visualize how the predicted number of cases matches with the actual number of cases. 
 
 ```{r testWallSJ}
 sj_prospective_preds <- data.frame(sj_data_for_model$year[31:length(sj_data_for_model$total_cases)], sj_data_for_model$week_of_year[31:length(sj_data_for_model$total_cases)], actual, predicted)
@@ -320,6 +323,8 @@ The normalized Root-Mean Square Error of the model for San Juan with only curren
 nrmse(predictions, test$total_cases)
 ```
 
+The normalized prediction error rate for this model is better than the model better than the model with current environmental data, lagged environmental data, and date information.
+
 ```{r testWcurentEnviroSJ}
 sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
 colnames(sj_preds) = c("year", "week_of_year", "actual", "predicted")
@@ -328,7 +333,7 @@ sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Current Climate Variables") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditons, we see similar patterns in the prediction to the model which used current  climate conditons, past weather conditons, and the time of year. 
+Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. 
 
 ### With Current Climate and Lagged Weather
 This models includes current ndvi, current temperature, humidity, and precipitation, and lagged temperature, humidity, and precipitation
@@ -355,8 +360,10 @@ RMSE(predictions - test$total_cases)
 The normalized Root-Mean Square Error of the model for San Juan with current environmental data and lagged weather data:
 
 ```{r}
-nrmse(predictions, actual)
+nrmse(predictions, test$total_cases)
 ```
+
+The normalized error rate is better for the model with current environmental data and lagged weather data than the other models.
 
 ```{r testWlagSJ}
 sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
@@ -366,7 +373,7 @@ sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Climate Variables with Lags") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditons and lagged weather condtions, we see similar patterns in the prediction to the model which used current  climate conditons, past weather conditons, and the time of year. However this model has an improved RMSE, and the varables used all have an association with causality for outbreaks, so this is the model that we can use for predicting cases in San Juan.
+Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. However this model has an improved RMSE, and the variables used all have an association with causality for outbreaks, so this is the model that we can use for predicting cases in San Juan.
 
 
 ## Iquitos
@@ -406,6 +413,8 @@ The normalized Root-Mean Square Error of the model with current environmental da
 nrmse(predicted, actual)
 ```
 
+This is a relatively high error rate. We can visualize how the predicted number of cases matches with the actual number of cases. 
+
 ```{r testWallIQ}
 iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, predicted)
 colnames(iq_prospective_preds) = c("year", "week_of_year", "actual", "predicted")
@@ -440,6 +449,8 @@ The normalized Root-Mean Square Error of the model with current environmental da
 nrmse(predictions, test$total_cases)
 ```
 
+The normalized prediction error rate for this model is better than the model better than the model with current environmental data, lagged environmental data, and date information.
+
 ```{r testWcurentEnviroIQ}
 iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
 colnames(iq_preds) = c("year", "week_of_year", "actual", "predicted")
@@ -448,7 +459,7 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Current Climate Variables Only") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditons, we see similar patterns in the prediction to the model which used current  climate conditons, past weather conditons, and the time of year. 
+Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. 
 
 ### With Lagged Temperature, Humidity, and Precipitation
 
@@ -477,6 +488,8 @@ The normalized Root-Mean Square Error of the model for Iquitos with current envi
 nrmse(predictions, test$total_cases)
 ```
 
+The normalized error rate is better for the model with current environmental data and lagged weather data than the other models.
+
 ```{r testWlagIQ}
 iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
 colnames(iq_preds) = c("year", "week_of_year", "actual", "predicted")
@@ -485,15 +498,14 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables with Lags") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditons and lagged weather condtions, we see similar patterns in the prediction to the model which used current  climate conditons, past weather conditons, and the time of year. However this model has an improved RMSE, and the varables used all have an association with causality for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
+Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. However this model has an improved RMSE, and the variables used all have an association with causality for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
 
 # App and user prediction
 
-We created a user interface to get predictions based on the models developed above. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. They also have the option to enter a date and the weather data at that date and lagged data from will be collected from Weather Underground. 
+We created a user interface to get predictions based on the models developed above. We learned to build a shiny app, so that the user could have a graphical interface. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. They also have the option to enter a date and the weather data at that date and lagged data from will be collected from Weather Underground. This data is collected using an API, that we learned to access in the course of this project. The NDVI used in this prediction will be the average of the training data.
 
 ![](https://icons.wxug.com/logos/JPG/wundergroundLogo_4c_horz.jpg)
 
-The NDVI used in this prediction will be the average of the training data.
 
 #Conclution
 
