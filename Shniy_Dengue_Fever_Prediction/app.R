@@ -86,7 +86,11 @@ ui <- dashboardPage(
                  average temperature, relative humidity, and total precipitation."),
               h4("See the plots below for comparisons of our predicted values and the acutal values.
                  The San Juan model yielded an RMSE of 27.5 and the Iquitos model yielded an RMSE of 3.87. 
-                 Note that Iquitos tended to have fewer cases per week than San Juan.")
+                 Note that Iquitos tended to have fewer cases per week than San Juan."),
+              fluidRow(
+                img(src="Iquitos.png", width = 400),
+                img(src="SanJuan.png", align= "right", width = 400)
+              )
       ),
       # Second tab content
       tabItem(tabName = "input_one_observation",
