@@ -151,12 +151,11 @@ corrplot(corr_matrix, method = "color")
 
 ```
 
-
-Since these measure roughly the same information, we opt to include only one in our model. Relative humidity is the measure most often used in literature we have read. It is also an easy-to-find measure, making our model more user-friendly. Therefore, we use only relative humidity in the model.
+As before, since these measure roughly the same information, we opt to include only one in our model. Relative humidity is the measure most often used in literature we have read. It is also an easy-to-find measure, making our model more user-friendly. Therefore, we use only relative humidity in the model.
 
 ## Normalized Difference Vegetation Index: NDVI
 
-NDVI is an indicator of vegetation by measuring the amount of live green plant material in an area as seen by satellite. [Past studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3855512/) have found that measures of vegetative indices are correlated with rates of dengue fever. It has been proposed that vegetation provides an environment for mosquitoes, vectors of dengue fever to lay eggs. Vegetation can also effect the temperature, precipitation, and humidity of micro-environments. We have used used the ndvi measured at the four points closest to the city's central point, one in each direction. 
+NDVI is an indicator of vegetation, measuring the amount of live green plant material in an area as seen by satellite. [Past studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3855512/) have found that measures of vegetative indices are correlated with rates of dengue fever. It has been proposed that vegetation provides an environment for mosquitoes, vectors of dengue fever, to lay eggs. Vegetation can also affect the temperature, precipitation, and humidity of micro-environments. We have used used the ndvi measured at the four points closest to the city's central point, one in each direction. 
 
 ## Creating Lagged Data
 
