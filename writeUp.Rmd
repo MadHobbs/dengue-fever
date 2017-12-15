@@ -1,9 +1,10 @@
 ---
-title: "Predicting cases of dengue feaver based on evnivornemtnal data using a random forest model."
+title: Predicting cases of dengue feaver based on evnivornemtnal data using a random
+  forest model.
 author: "Madison Hobbs and Jenn Havens"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 ```{r loadData, echo = F , warning=FALSE, include=FALSE}
 
@@ -450,10 +451,10 @@ Comparing predicted to actual cases in a subset of the weeks, with the model usi
 
 ### 1. Time Series Random Forest
 
-```{r buildWallIQ , include=F}
+```{r buildWallIQ, include=FALSE}
 set.seed(91)
 step <- 30
-predictions <- rep(NA, step)
+iq_ts_predictions <- rep(NA, step)
 
 index_to_predict = step + 1
 while(index_to_predict <= length(iq_data_for_model$total_cases)) {
@@ -466,35 +467,35 @@ while(index_to_predict <= length(iq_data_for_model$total_cases)) {
   # predict on single observation:  the next week, the index_to_predict
   predicted_num_cases <- predict(model, slice(iq_data_for_model, index_to_predict))
   
-  predictions <- c(predictions, predicted_num_cases)
+  predictions <- c(iq_ts_predictions, predicted_num_cases)
   
   index_to_predict = index_to_predict + 1
 }
 
 actual <- iq_data_for_model$total_cases[31:length(iq_data_for_model$total_cases)]
-predicted <- predictions[31:length(predictions)]
+iq_ts_predicted <- predictions[31:length(iq_ts_predictions)]
 
-RMSE(predicted - actual)
-MAE(predicted - actual)
+RMSE(iq_ts_predicted - actual)
+MAE(iq_ts_predicted - actual)
 ```
 
 The RMSE and MAE error are respectively:
 
 ```{r}
-RMSE(predictions - test$total_cases)
-MAE(predictions - test$total_cases)
+RMSE(iq_ts_predictions - test$total_cases)
+MAE(iq_ts_predictions - test$total_cases)
 ```
 
 The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos:
 
 ```{r}
-nrmse(predicted, actual)
+nrmse(iq_ts_predicted, actual)
 ```
 
 This is a relatively high error rate. We can visualize how the predicted number of cases matches with the actual number of cases. 
 
 ```{r testWallIQ}
-iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, predicted)
+iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, iq_ts_predicted)
 colnames(iq_prospective_preds) = c("year", "week_of_year", "actual", "predicted")
 iq_prospective_preds <- iq_prospective_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
 
@@ -604,3 +605,8 @@ The best predictive models for cases of dengue fever in San Juan, Puerto Rico an
 
 # Future Areas of Work
 
+We used simple test and training to assess the two models without time variables as predictors. A better extension to our work would include a more comprehensive approach such as 10-fold cross validation. 
+
+As mentioned above, the data we used to build and assess our models represents a fraction of the available data on the web. A good follow-up would be to compile all dengue fever and climate data available, or at least the most recent data (post-2010) to build a more informed model.
+
+We also could have played around with the length of the time lags. 2-3 months was the suggested length according to literature we read (as mentioned above), so we chose 12 weeks. However, an extention to our work could approach the length of time lag as a tuning parameter and select the time lag for each climate variable which generates the most accurate predictions.
