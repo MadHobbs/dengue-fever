@@ -62,8 +62,7 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       menuItem("Our model", tabName = "our_model", icon = icon("world")),
-      menuItem("Manually Input Data", tabName = "input_one_observation", icon = icon("hand-right", lib = "glyphicon")),
-      menuItem("Input Data Table", tabName = "input_df", icon = icon("table")),
+      menuItem("Input Data", tabName = "input_one_observation", icon = icon("hand-right", lib = "glyphicon")),
       img(src="wundergroundLogo_4c_rev.png", align = "center", width = 200)
       
     )
@@ -76,18 +75,27 @@ ui <- dashboardPage(
               h2("Predicting Weekly Dengue Fever Cases"),
               h3("San Juan, Puerto Rico and Iquitos, Ecuador"),
               dataTableOutput("our_sj_table"),
-              img(src="dengue.jpg", width = 500)
-
+              img(src="dengue.jpg", width = 500),
+              h4("We present a two random forest models trained separately on weekly dengue fever cases  
+                 and environmental predictors for San Juan, Puerto Rico and Iquitos, Perú. The
+                 data comes from NOAA's Dengue Fever Prediction page (sourced through Driven Data) and
+                 contain data from 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). 
+                 These models 
+                 use weekly average temperature, relative humidity, total precipitation, and
+                 Normalized Difference Vegetation Index (NDVI). We also incorporate 12-week time lagged
+                 average temperature, relative humidity, and total precipitation."),
+              h4("See the plots below for comparisons of our predicted values and the acutal values.
+                 The San Juan model yielded an RMSE of 27.5 and the Iquitos model yielded an RMSE of 3.87. 
+                 Note that Iquitos tended to have fewer cases per week than San Juan.")
       ),
       # Second tab content
       tabItem(tabName = "input_one_observation",
               
-              h2("Manually Input Predictors"),
+              h2("Input Predictors"),
               h4("Input as many rows as you like. 
                  Each row will get passed into our random forest model 
                  which will predict the number of Dengue Fever cases for 
-                 a week with the conditions you enter. Our model was trained
-                 on data from NOAA's Dengue Fever Prediction page (sourced through Driven Data). "),
+                 a week with the conditions you enter."),
               h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
                   Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
               h4("Alternatively, choosing the 'Entered Date' option will collect weather data from 

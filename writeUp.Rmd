@@ -392,7 +392,7 @@ ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_p
 
 Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. This model predicts relative size of outbreaks apparently better than the random forest with time variables as predictors.
 
-### 3. Random Forest with Current Climate Variables and Time Lags
+### 3. Random Forest with Current Climate Variables and Lagged Weather Data
 
 We suspect that we can get improved model performance by including time lagged variables.
 
@@ -445,7 +445,7 @@ Comparing predicted to actual cases in a subset of the weeks, with the model usi
 
 ### 1. Random Forest with Current Environmental Data, Lagged Weather Data, and Date Information
 
-```{r buildWallIQ, eval=FALSE, include=FALSE}
+```{r buildWallIQ, include=FALSE}
 set.seed(91)
 step <- 30
 iq_ts_predictions <- rep(NA, step)
@@ -497,7 +497,7 @@ ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 
 Based on this, we can see that the model has some good predictive ability, on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases. However, the model was able to predict timing of outbreaks well, and relative size of the outbreaks. 
 
-### 2. Random Foret With Environmental Varibles Only 
+### 2. Random Forest With Environmental Varibles Only 
 
 ```{r buildWcurentEnviroIQ , include=F}
 set.seed(44)
@@ -512,7 +512,6 @@ iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week
 iq_model
 
 predictions <- predict(iq_model, test)
-#RMSE(predictions - test$total_cases)
 ```
 
 The RMSE of the model with current environmental data only for modeling Iquitos is:
@@ -527,7 +526,7 @@ The normalized Root-Mean Square Error of the model with current environmental da
 nrmse(predictions, test$total_cases)
 ```
 
-The normalized prediction error rate for this model is better than the model better than the model with current environmental data, lagged environmental data, and date information.
+The normalized prediction error rate for this model is better than the model with current environmental data, lagged environmental data, and date information.
 
 ```{r testWcurentEnviroIQ}
 iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
@@ -537,9 +536,9 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Current Climate Variables Only") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. 
+Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. 
 
-### With Lagged Temperature, Humidity, and Precipitation
+### 3. Random Forest with Current Climate Variables and Lagged Weather Data
 
 ```{r buildWlagIQ, include=F}
 set.seed(76)
@@ -559,20 +558,19 @@ save(iq_model, file = "iq_model.rda")
 predictions <- predict(iq_model, test)
 ```
 
-The RMSE and MAE error are respectively:
+The RMSE of the model for Iquitos with current environmental data and lagged weather data is:
 
 ```{r}
 RMSE(predictions - test$total_cases)
-MAE(predictions - test$total_cases)
 ```
 
-The normalized Root-Mean Square Error of the model for Iquitos with current environmental data and lagged weather data:
+The normalized Root-Mean Square Error of the model for Iquitos with current environmental data and lagged weather data is:
 
 ```{r}
 nrmse(predictions, test$total_cases)
 ```
 
-The normalized error rate is better for the model with current environmental data and lagged weather data than the other models.
+The normalized error rate is better than either of the other models.
 
 ```{r testWlagIQ}
 iq_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
@@ -582,23 +580,25 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables with Lags") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. However this model has an improved RMSE, and the variables used all have an association with causality for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
+Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. However this model yields the best RMSE and NRMSE, and the variables used all are scientifically hypothesized to have causalilty for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
 
 # App and user prediction
 
-We created a user interface to get predictions based on the models developed above. We learned to build a shiny app, so that the user could have an interactive interface. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. Alternatively, they can enter a date, and the weather data at that date and lagged data from will be collected from Weather Underground. This data is collected using an API, that we learned to access in the course of this project. The NDVI used in this prediction will be the average of our training data.
+We created a [user interface](https://mhobbs.shinyapps.io/Dengue_Fever_Prediction/) to get predictions based on the models developed above. We learned to build a shiny app, so that the user could have an interactive interface. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. Alternatively, they can enter a date, and the weather data at that date and lagged data from will be collected from Weather Underground. This data is collected using an API, that we learned to access in the course of this project. The NDVI used in this prediction will be the average of our training data.
 
 ![](https://icons.wxug.com/logos/JPG/wundergroundLogo_4c_horz.jpg)
 
 
 # Conclusion
 
-The best predictive models for cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú were found using current climate data (weather and vegetative) and weather data from previous weeks (lagged data) as explanatory variables in a random forest model. We were able to use these models as the basis of a tool which allows someone to predict cases of dengue fever based on the environment. The environmental conditions are thought to contribute to patterns in dengue fever outbreaks because environmental conditions effect mating and survival of mosquitoes, which are vectors for dengue fever. We have shown that just a few metrics of environmental conditions is sufficient to give a rough indication of the expected out breaks in San Juan, Puerto Rico and Iquitos, Perú. By using different training data it would be possible to develop models for any area of interest. This could be useful in prioritizing which areas receive assistance in possible large scale outbreaks. This model is limited by considering only the past environmental situation, and only the years 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). [It is has been proposed](http://www.sciencedirect.com/science/article/pii/S0013935116303127) that in the future  current patterns of outbreaks will be disrupted, as climate change effects regular weather patterns and urbanization disturbs mosquito habitat (standing water where mosquitoes can lay eggs). The burden of dengue fever has been estimated to have increased 30-fold in 50 years, and the increase is expected to continue if there is no intervention. 
+The best predictive models for cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú were found using current climate data (weather and vegetative) and weather data from previous weeks (lagged data) as explanatory variables in a random forest model. We were able to use these models as the basis for a tool which allows someone to predict cases of dengue fever based on the environment. The environmental conditions are thought to contribute to patterns in dengue fever outbreaks because environmental conditions affect mating and survival of mosquitoes, which are vectors for dengue fever. We have shown that just a few metrics of environmental conditions are sufficient to give a rough indication of the expected outbreaks in San Juan, Puerto Rico and Iquitos, Perú. By using different training data it would be possible to develop models for any area of interest. This could be useful in prioritizing which areas receive assistance in possible large scale outbreaks. This model is limited by considering only the past environmental situation, and only the years 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). [It is has been proposed](http://www.sciencedirect.com/science/article/pii/S0013935116303127) that in the future, patterns of outbreaks will be disrupted, as climate change effects regular weather patterns and urbanization disturbs mosquito habitat (standing water where mosquitoes can lay eggs). The burden of dengue fever has been estimated to have increased 30-fold in 50 years, and the increase is expected to continue if there is no intervention. 
 
 ## Future Areas of Work
 
-We used simple test and training to assess the two models without time variables as predictors. A better extension to our work would include a more comprehensive approach such as 10-fold cross validation. 
+We used simple test and training to assess the two models without time variables as predictors. An extension to our work would include a more comprehensive approach such as iterative model construction and assessment (as performed on the model with time variables as predictors). 
 
-As mentioned above, the data we used to build and assess our models represents a fraction of the available data on the web. A good follow-up would be to compile all dengue fever and climate data available, or at least the most recent data (post-2010) to build a more informed model.
+We also could have played around with the length of the time lags. 2-3 months was the suggested length according to literature we read (as mentioned above), so we chose 12 weeks. However, we could approach the length of time lag as a tuning parameter and select the time lag for each climate variable which generates the most accurate predictions.
 
-We also could have played around with the length of the time lags. 2-3 months was the suggested length according to literature we read (as mentioned above), so we chose 12 weeks. However, an extention to our work could approach the length of time lag as a tuning parameter and select the time lag for each climate variable which generates the most accurate predictions.
+As mentioned above, the data we used to build and assess our models represents a fraction of the available data on the web. A good follow-up would be to compile all dengue fever and climate data available, or at least the most recent data (post-2010) to build more informed models for San Juan and Iquitos. And build models for other areas of interst.
+
+
