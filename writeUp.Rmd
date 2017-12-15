@@ -51,7 +51,7 @@ We created two (2) predictive models, one for each of the cities of interest: Sa
 
 A random forest algorithm builds up many bagged and decorrelated decision trees which use explanatory variables to group the possible values of a response variable based on training data. To predict an observation with unknown response, we send that observation (and its explanatory variables) though all those decision trees, get an answer from each one, then take the average of those answers to be our prediction.
 
-The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (ndvi). We also considered time as a possible variable, constructing a time-series random forest. The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see "variable_descriptions.pdf" on our github.
+The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (NDVI). We also considered time as a possible variable, constructing a time-series random forest. The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see "variable_descriptions.pdf" on our github.
 
 ## Missing Values:
 
@@ -155,15 +155,15 @@ As before, since these measure roughly the same information, we opt to include o
 
 ## Normalized Difference Vegetation Index: NDVI
 
-NDVI is an indicator of vegetation, measuring the amount of live green plant material in an area as seen by satellite. [Past studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3855512/) have found that measures of vegetative indices are correlated with rates of dengue fever. It has been proposed that vegetation provides an environment for mosquitoes, vectors of dengue fever, to lay eggs. Vegetation can also affect the temperature, precipitation, and humidity of micro-environments. We have used used the ndvi measured at the four points closest to the city's central point, one in each direction. 
+NDVI is an indicator of vegetation, measuring the amount of live green plant material in an area as seen by satellite. [Past studies](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3855512/) have found that measures of vegetative indices are correlated with rates of dengue fever. It has been proposed that vegetation provides an environment for mosquitoes, vectors of dengue fever, to lay eggs. Vegetation can also affect the temperature, precipitation, and humidity of micro-environments. We have used used the NDVI measured at the four points closest to the city's central point, one in each direction. 
 
 ## Creating Lagged Data
 
 We separate San Juan and Iquitos data to produce two models, one to predict weekly dengue fever cases in San Juan and the other in Iquitos. This is because weather and vegetation will behave differently in relation to time between both locations, because these are locations separated by distance, climate, and ecosystem. 
 
-At the same time, we create two lag variables for each site: temperature lag and precipitation lag. The lagged temperature and precipitation variables record, respectively, what the temperature or precipitation was 12 weeks prior for the observation at hand. 
+Time lagged variables of 2-3 months [have been shown to be signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature, precipitation, and relative humidity. 
 
-Time lagged environmental variables [have been shown to be a signifigant predictors](http://www.sciencedirect.com/science/article/pii/S0001706X07001271). Specifically we consider temperature, precipitation, and relative humidity. 
+We therefore create three lag variables for each site: temperature lag, precipitation lag, and humidity lag. The lagged variables respectively record what the temperature, precipitation or humidity was 12 weeks prior to the observation at hand. 
 
 ```{r makeTimeLags}
 lag_num_weeks = 12
@@ -247,7 +247,20 @@ Michael J. Kane et. al compared a time series Random Forest model and an ARIMA m
 
 To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
 
-Inspired by their work, we was used for prediction of avian influenza H5N1 outbreaks. The model was assessed by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward iteratively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
+Inspired by their work, we constructed a time series random forest model, using time as a predictor and included the time lags created above. We assessed our model as they did: 
+
+1) Start by building a model on the first 30 weeks of data
+2) Use the model just built to predict the 31st week of data
+3) Write down that prediction for the number of dengue cases in week 31
+4) Now train a random forest on the first 31 weeks of data (actual values, no predicted values)
+5) Use the model just build to predict the 32nd week of data 
+6) Write down that prediction for the number of dengue cases in week 32
+7) Now train a random forest on the firs 32 weeks of data ...
+... and so on until you have no weeks left to predict!
+
+In the end, we get n - 30 predictions for dengue cases in a week (we ge predictions o for )
+
+,  by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward iteratively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
 
 Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
 
@@ -361,7 +374,7 @@ ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_p
 Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. 
 
 ### With Current Climate and Lagged Weather
-This models includes current ndvi, current temperature, humidity, and precipitation, and lagged temperature, humidity, and precipitation
+This models includes current NDVI, current temperature, humidity, and precipitation, and lagged temperature, humidity, and precipitation
 
 ```{r buildWlagSJ, include=F}
 set.seed(98)
