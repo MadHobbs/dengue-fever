@@ -43,14 +43,15 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 ```
 
-#Introduction:
+#Introduction
+
 Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Understanding how environmental factors predict dengue fever rates can serve as an early warning system to help local authorities prepare for unusually high numbers of cases and inform them about which areas may need the most outside assistance. DrivenData is hosting a competition: [DengAI: Predicting Disease Spread](https://www.drivendata.org/competitions/44/dengai-predicting-disease-spread/), to predict cases of dengue fever in San Juan, Puerto Rico and Iquitos, Peru.The data comes from the [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov). 
 
 ##The Model
 
 We created two (2) predictive models, one for each of the cities of interest: San Juan and Iquitos. Our model is a random forest which was trained on data from each city individually, producing one random forest for San Juan and one random forest for Iquitos. 
 
-A random forest algorithm builds up many bagged and decorrelated decision trees which use explanatory variables to group the possible values of a response variable based on training data. To predict an observation with unknown response, we send that observation (and its explanatory variables) though all those decision trees, get an answer from each one, then take the average of those answers to be our prediction.
+A random forest algorithm builds up many bagged and decorrelated decision trees which use explanatory variables to group the possible values of a response variable based on training data. To predict an observation with unknown response, we send that observation (and its explanatory variables) though all of those decision trees, get an answer from each one, then take the average of those answers to be our prediction.
 
 The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (NDVI). We also considered time as a possible variable, constructing a time-series random forest. The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see "variable_descriptions.pdf" on our github.
 
@@ -63,7 +64,7 @@ First, we ask how many values in our data are NA?
 round(sum(is.na(TrainFull))/(dim(TrainFull)[1]*dim(TrainFull)[2]), 3)
 ```
 
-Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their documentation: "Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost." Fortunately, it doesn't take too long for bagging to impute the relatively few missing values on our data.
+Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their [documentation](https://topepo.github.io/caret/pre-processing.html#impute): "Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost." Fortunately, it doesn't take too long for bagging to impute the relatively few missing values on our data.
 
 ```{r bagToFillNAs}
 set.seed(6)
@@ -74,19 +75,19 @@ TrainFull_noNA <- predict(impTrainFull, TrainFull)
 # Variable Selection
 
 Some variables, like temperature and precipitation, are provided to us from multiple sources in the Driven Data dengue fever prediction data set. 
-One source is [NOAA GHCN](https://www.ncdc.noaa.gov/data-access/land-based-station-data/land-based-datasets/global-historical-climatology-network-ghcn) station measurements in San Juan, PR and Iquitos, Perú. See NOAA's "Environmental data sources for the Dengue Project" on our github for specific geographical coordinates of these stations. 
+Some data comes from [NOAA GHCN](https://www.ncdc.noaa.gov/data-access/land-based-station-data/land-based-datasets/global-historical-climatology-network-ghcn) station measurements in San Juan, Puerto Rico and Iquitos, Perú. See NOAA's "Environmental data sources for the Dengue Project" on our github for specific geographical coordinates of these stations.
 
-A second source is NOAA's CDR PERSIANN Precipitation Product which uses remote sensing (satellites) coupled with an artificial neural network to produce precipitation data for every 0.25 x 0.25 degree on Earth. 
+A second data source is [NOAA's CDR PERSIANN](https://www.ncdc.noaa.gov/cdr/atmospheric/precipitation-persiann-cdr) Precipitation Product which uses remote sensing (satellites) coupled with an artificial neural network to produce precipitation data for every 0.25 x 0.25 degree on Earth. 
 
-A third source is the Climate Forecast System Reanalysis (CFSR) provides the "best estimate" for the state of the "atmosphere-ocean-land surface-sea ice system" over a given time period (according to NOAA via "Environmental data sources for the Dengue Project"). It is from this source that our humidity and dew point measurements come. 
-s
+A third data source is the [Climate Forecast System Reanalysis (CFSR)](https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2) provides the "best estimate" for the state of the "atmosphere-ocean-land surface-sea ice system" over a given time period (according to NOAA via "Environmental data sources for the Dengue Project"). It is from this source that our humidity and dew point measurements come. 
+
 ## Temperature
 
 There are two different sources for temperature: station and Climate Forecast System Reanalysis. 
 
 We think that the station-measured temperature is the preferable predictor because these are not estimated from a model, but rather recorded directly. The [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov) also notes in their reference guide, "Environmental data sources for the Dengue Project," that, "Ground observations are generally an optimal representation of actual local conditions." 
 
-Stations provide minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant, and investigate their correlation below.
+Stations provide minimum temperature, maximum temperature, average temperature, or diurnal temperature range. We suspect that these variables are redundant and investigate their correlation below.
 
 ```{r tempCor, echo=F, include=F}
 temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, station_min_temp_c, station_diur_temp_rng_c) 
@@ -94,13 +95,12 @@ temps <- TrainFull_noNA %>% select(station_max_temp_c,station_avg_temp_c, statio
 corr_matrix <- cor(temps)
 corr_pmat <- cor_pmat(temps)
 # they are all significantly correlated 
-#all(corr_pmat < 0.05)
+all(corr_pmat < 0.05)
 ```
 
-In fact, all pairwise correlations between the four measures of temperature are significant. We can see these strong correlations represented in the correlation plot below:
+In fact, all pairwise correlations between the four measures of temperature are significant and positive. We can see these strong correlations represented in the correlation plot below:
 
 ```{r tempCorPlot}
-#ggcorrplot(corr_matrix, hc.order = TRUE)
 corrplot(corr_matrix, method = "color")
 ```
 
@@ -306,7 +306,7 @@ RMSE <- function(error)
 
 ### 1. Time Series Random Forest
 
-```{r buildWallSJ, include=F}
+```{r buildWallSJ, include=FALSE}
 step <- 30
 predictions <- rep(NA, step)
 
@@ -451,7 +451,7 @@ Comparing predicted to actual cases in a subset of the weeks, with the model usi
 
 ### 1. Time Series Random Forest
 
-```{r buildWallIQ, include=FALSE}
+```{r buildWallIQ, eval=FALSE, include=FALSE}
 set.seed(91)
 step <- 30
 iq_ts_predictions <- rep(NA, step)
@@ -599,11 +599,11 @@ We created a user interface to get predictions based on the models developed abo
 ![](https://icons.wxug.com/logos/JPG/wundergroundLogo_4c_horz.jpg)
 
 
-#Conclution
+# Conclusion
 
 The best predictive models for cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú were found using current climate data (weather and vegetative) and weather data from previous weeks (lagged data) as explanatory variables in a random forest model. We were able to use these models as the basis of a tool which allows someone to predict cases of dengue fever based on the environment. The environmental conditions are thought to contribute to patterns in dengue fever outbreaks because environmental conditions effect mating and survival of mosquitoes, which are vectors for dengue fever. We have shown that just a few metrics of environmental conditions is sufficient to give a rough indication of the expected out breaks in San Juan, Puerto Rico and Iquitos, Perú. By using different training data it would be possible to develop models for any area of interest. This could be useful in prioritizing which areas receive assistance in possible large scale outbreaks. This model is limited by considering only the past environmental situation, and only the years 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). [It is has been proposed](http://www.sciencedirect.com/science/article/pii/S0013935116303127) that in the future  current patterns of outbreaks will be disrupted, as climate change effects regular weather patterns and urbanization disturbs mosquito habitat (standing water where mosquitoes can lay eggs). The burden of dengue fever has been estimated to have increased 30-fold in 50 years, and the increase is expected to continue if there is no intervention. 
 
-# Future Areas of Work
+## Future Areas of Work
 
 We used simple test and training to assess the two models without time variables as predictors. A better extension to our work would include a more comprehensive approach such as 10-fold cross validation. 
 

@@ -89,10 +89,9 @@ ui <- dashboardPage(
                  a week with the conditions you enter. Our model was trained
                  on data from NOAA's Dengue Fever Prediction page (sourced through Driven Data). "),
               h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
-                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index). 
-                  For weather data vist NOAA or WeatherUnderground (https://www.wunderground.com/). Choosing the 'Entered Date' option will collect weather data from 
-                  WeatherUnderground.
-                 "),
+                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
+              h4("Alternatively, choosing the 'Entered Date' option will collect weather data from 
+                  WeatherUnderground (https://www.wunderground.com/)."),
               hr(),
               
               sidebarLayout(
@@ -148,13 +147,6 @@ ui <- dashboardPage(
               )
               )
               
-      ),
-      
-      # Second tab content
-      tabItem(tabName = "input_df",
-              # Copy the line below to make a file upload manager
-              fileInput("file", label = h3("Select data file")),
-              dataTableOutput("table_file")
       )
     )
   )
