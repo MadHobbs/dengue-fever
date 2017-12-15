@@ -96,14 +96,16 @@ ui <- dashboardPage(
       tabItem(tabName = "input_one_observation",
               
               h2("Input Predictors"),
+              h4("Select one city at a time with the check boxes."),              
+              h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
+                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
+              h4("If you choose the 'Entered Date' option, weather data will be collected from 
+                  WeatherUnderground (https://www.wunderground.com/). 
+                 and the NDVI used will be the average from the training data"),
               h4("Input as many rows as you like. 
                  Each row will get passed into our random forest model 
                  which will predict the number of Dengue Fever cases for 
                  a week with the conditions you enter."),
-              h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
-                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
-              h4("Alternatively, choosing the 'Entered Date' option will collect weather data from 
-                  WeatherUnderground (https://www.wunderground.com/)."),
               hr(),
               
               sidebarLayout(
