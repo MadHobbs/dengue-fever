@@ -277,13 +277,11 @@ Inspired by their work, we constructed a time series random forest model, using 
 7) Now train a random forest on the firs 32 weeks of data ...
 ... and so on until you have no weeks left to predict!
 
-In the end, we get n - 30 predictions for dengue cases in a week (we ge predictions o for )
+In the end, we get n - 30 predictions for dengue cases in a week (we ge predictions for all but the first 30 observations in the training set). We compare these predictions to the actual number of dengue cases and calculate error.
 
-,  by taking data from the previous 30 weeks to predict for the next week. The simulation steps forward iteratively adding new data for each week, the new model using the updated data to predict the next week, and comparing to the true number of cases.
+## Measuring Error
 
-Moving in steps of 30 weeks, we train the model on 30 weeks, then predict the next week. 
-
-We'll assess our model's performance by computing the error (root mean squared error) between the model's predicted number of cases and the actual number of cases for each week. The Driven Data team uses mean absolute error to assess models, so we will, too.
+We look at mean absolute error (MAE), root mean squared error (RMSE), and Normalized RMSE (NRMSE) to compare actual and predicted values. Although MAE will the the measrue used by the DrivenData team to assess our model, NRMSE is perhaps the most useful value to us. NRMSE is root mean squared error divided by the standard deviation of the observations (see the [nrmse function](https://www.rdocumentation.org/packages/hydroGOF/versions/0.3-10/topics/nrmse)). Normalizing RMSE in this way helps us compare error across different models or data sets with different scales. We have two data sets with different scales (San Juan experienced many more dengue cases than Iquitos), so NRMSE will be useful to us. 
 
 ```{r errorRateFunctions}
 # returns Mean Absolute Error
@@ -299,12 +297,13 @@ RMSE <- function(error)
 {
   sqrt(mean(error^2))
 }
-```
 
+# nrmse from hydroGOF package by Mauricio ZambranoBigiarini
+```
 
 ## San Juan
 
-###Testing with current environemntal data, lagged environmental data, and date information
+### Testing with current environemntal data, lagged environmental data, and date information
 
 ```{r buildWallSJ, include=F}
 step <- 30
