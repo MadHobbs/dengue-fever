@@ -250,12 +250,12 @@ For each site, we construct and assess three versions of the random forest model
     • environmental time lags as predictors
     • year and week as predictors
     
-2) Simple Environmental-Only Random Forest
+2) Current Climate Variables Only Random Forest
     • "current" environmental factors as predictors
     • no time lags
     • year and week not included as predictors
     
-3) Environmental Data with Time Lags Random Forest
+3) Current Climate Variables with Time Lags Random Forest
     • "current" environmental factors as predictors
     • environmental time lags as predictors
     • year and week not included as predictors
@@ -281,9 +281,9 @@ In the end, we get n - 30 predictions for dengue cases in a week (we ge predicti
 
 ## Measuring Error
 
-We look at mean absolute error (MAE), root mean squared error (RMSE), and Normalized RMSE (NRMSE) to compare actual and predicted values. Although MAE will the the measrue used by the DrivenData team to assess our model, NRMSE is perhaps the most useful value to us. NRMSE is root mean squared error as a percentage of the standard deviation of the observations and thus ranges from 0 to 100 (see the [nrmse function](https://www.rdocumentation.org/packages/hydroGOF/versions/0.3-10/topics/nrmse)). Normalizing RMSE in this way helps us compare error across different models or data sets with different scales. We have two data sets with different scales (San Juan experienced many more dengue cases than Iquitos), so NRMSE will be useful to us. 
+We use root mean squared error (RMSE), mean absolute error (MAE), and Normalized RMSE (NRMSE) to compare actual and predicted values. RMSE and MAE help us get a sense of how "off" our prediction might be. NRMSE helps us compare error across different models and the two data sets. NRMSE is root mean squared error as a percentage of the standard deviation of the observations and thus ranges from 0 to 100 (see the [nrmse function](https://www.rdocumentation.org/packages/hydroGOF/versions/0.3-10/topics/nrmse)). Normalizing RMSE in this way helps us compare error across different models or data sets with different scales. We have two data sets with different scales (San Juan experienced many more dengue cases than Iquitos), so NRMSE will be useful to us. 
 
-```{r errorRateFunctions}
+```{r errorRateFunctions, include = FALSE}
 # returns Mean Absolute Error
 # error is defined as actual - predicted
 MAE <- function(error)
@@ -330,9 +330,6 @@ predicted <- predictions[31:length(predictions)]
 
 RMSE(predicted - actual)
 MAE(predicted - actual)
-
-# ranges from 0 to 100, scaled to data
-nrmse(predicted, actual)
 ```
 
 The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information on the San Juan training data is:
@@ -354,9 +351,10 @@ ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 
 Based on this we can see that the model has good predictive ability, on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases. However, the model was able to predict timing of outbreaks well, and relative size of the outbreaks. 
 
-### With current climate varibles only
+### 2. Random Forest With Current Climate Varibles Only
 
 ```{r buildWcurentEnviroSJ, include=F}
+set.seed(44)
 test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
 train <- anti_join(sj_data_for_model, test)
 
@@ -364,38 +362,47 @@ set.seed(92)
 sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:7), importance = TRUE)
 sj_model
 set.seed(82)
-sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year, -temp_lag, -precip_lag, -humidity_lag), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = sj_model$bestTune$mtry), importance = TRUE)
 sj_model
 
-predictions <- predict(sj_model, test)
-RMSE(predictions - test$total_cases)
+eonly_predictions <- predict(sj_model, test)
+RMSE(eonly_predictions - test$total_cases)
 
+```
 
+The RMSE and MAE error are respectively:
+
+```{r}
+RMSE(eonly_predictions - test$total_cases)
+MAE(eonly_predictions - test$total_cases)
 ```
 
 The normalized Root-Mean Square Error of the model for San Juan with only current environmental data is:
 
 ```{r}
-nrmse(predictions, test$total_cases)
+nrmse(eonly_predictions, test$total_cases)
 ```
 
 The normalized prediction error rate for this model is better than the model better than the model with current environmental data, lagged environmental data, and date information.
 
 ```{r testWcurentEnviroSJ}
-sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, predictions)
+sj_preds <- data.frame(test$year, test$week_of_year, test$total_cases, eonly_predictions)
 colnames(sj_preds) = c("year", "week_of_year", "actual", "predicted")
 sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
 
 ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Current Climate Variables") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current  climate conditions, past weather conditions, and the time of year. 
+Comparing predicted to actual cases in a subset of the weeks, with the model using only current climate conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. 
 
-### With Current Climate and Lagged Weather
-This models includes current NDVI, current temperature, humidity, and precipitation, and lagged temperature, humidity, and precipitation
+### 3. Random Forest with Current Climate Variables and Time Lags
+
+We suspect that we can get improved model performance by including time lagged variables.
+
+This models includes current NDVI, current temperature, humidity, and precipitation, as well as lagged temperature, lagged humidity, and lagged precipitation.
 
 ```{r buildWlagSJ, include=F}
-set.seed(98)
+set.seed(44)
 test <- sample_n(sj_data_for_model, 0.1*length(sj_data_for_model$total_cases))
 train <- anti_join(sj_data_for_model, test)
 
@@ -403,7 +410,7 @@ set.seed(97)
 sj_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 sj_model
 set.seed(81)
-sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 10), importance = TRUE)
+sj_model <- train(total_cases ~ ., data = select(sj_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = sj_model$bestTune$mtry), importance = TRUE)
 sj_model
 
 # save this model as rda
@@ -411,6 +418,13 @@ save(sj_model, file = "sj_model.rda")
 
 predictions <- predict(sj_model, test)
 RMSE(predictions - test$total_cases)
+```
+
+The RMSE and MAE error are respectively:
+
+```{r}
+RMSE(predictions - test$total_cases)
+MAE(predictions - test$total_cases)
 ```
 
 The normalized Root-Mean Square Error of the model for San Juan with current environmental data and lagged weather data:
@@ -434,9 +448,10 @@ Comparing predicted to actual cases in a subset of the weeks, with the model usi
 
 ## Iquitos
 
-###Testing with current environemntal data, lagged environemntal data and date information
+### 1. Time Series Random Forest
 
 ```{r buildWallIQ , include=F}
+set.seed(91)
 step <- 30
 predictions <- rep(NA, step)
 
@@ -444,7 +459,7 @@ index_to_predict = step + 1
 while(index_to_predict <= length(iq_data_for_model$total_cases)) {
 
   # use previous "step" number of weeks to build model
-  data <- slice(iq_data_for_model, (index_to_predict-step):(index_to_predict-1))
+  data <- slice(iq_data_for_model, 1:(index_to_predict-1))
   
   model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
   
@@ -463,6 +478,13 @@ RMSE(predicted - actual)
 MAE(predicted - actual)
 ```
 
+The RMSE and MAE error are respectively:
+
+```{r}
+RMSE(predictions - test$total_cases)
+MAE(predictions - test$total_cases)
+```
+
 The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos:
 
 ```{r}
@@ -479,7 +501,7 @@ iq_prospective_preds <- iq_prospective_preds %>% mutate(week_index = row_number(
 ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos : Actual vs. Predicted Weekly Dengue Cases") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Based on this we can see that the model has good predictive ability, on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases. However, the model was able to predict timing of outbreaks well, and relative size of the outbreaks. 
+Based on this we can see that the model has some good predictive ability, on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases. However, the model was able to predict timing of outbreaks well, and relative size of the outbreaks. 
 
 ### With environmental varibles only 
 
@@ -497,6 +519,13 @@ iq_model
 
 predictions <- predict(iq_model, test)
 #RMSE(predictions - test$total_cases)
+```
+
+The RMSE and MAE error are respectively:
+
+```{r}
+RMSE(predictions - test$total_cases)
+MAE(predictions - test$total_cases)
 ```
 
 The normalized Root-Mean Square Error of the model with current environmental data only for modeling Iquitos:
@@ -528,14 +557,20 @@ set.seed(91)
 iq_model <- train(total_cases ~ ., data = select(train, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:10), importance = TRUE)
 iq_model
 set.seed(84)
-iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1), importance = TRUE)
+iq_model <- train(total_cases ~ ., data = select(iq_data_for_model, -year, -week_of_year), method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = iq_model$bestTune$mtry), importance = TRUE)
 iq_model
 
 # save this model as rda
 save(iq_model, file = "iq_model.rda")
 
 predictions <- predict(iq_model, test)
-#RMSE(predictions - test$total_cases)
+```
+
+The RMSE and MAE error are respectively:
+
+```{r}
+RMSE(predictions - test$total_cases)
+MAE(predictions - test$total_cases)
 ```
 
 The normalized Root-Mean Square Error of the model for Iquitos with current environmental data and lagged weather data:
@@ -558,11 +593,14 @@ Comparing predicted to actual cases in a subset of the weeks, with the model usi
 
 # App and user prediction
 
-We created a user interface to get predictions based on the models developed above. We learned to build a shiny app, so that the user could have a graphical interface. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. They also have the option to enter a date and the weather data at that date and lagged data from will be collected from Weather Underground. This data is collected using an API, that we learned to access in the course of this project. The NDVI used in this prediction will be the average of the training data.
+We created a user interface to get predictions based on the models developed above. We learned to build a shiny app, so that the user could have an interactive interface. These models are developed specifically for the two locations for which we got the training data from, San Juan and Iquitos. The user has the option to enter current and lagged environmental data and the current NDVI. Alternatively, they can enter a date, and the weather data at that date and lagged data from will be collected from Weather Underground. This data is collected using an API, that we learned to access in the course of this project. The NDVI used in this prediction will be the average of our training data.
 
 ![](https://icons.wxug.com/logos/JPG/wundergroundLogo_4c_horz.jpg)
 
 
 #Conclution
 
-The best predictive models for cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú were found using current climate data (weather and vegetative) and weather data from previous weeks (lagged data) as explanatory variables in a random forest model. We were able to use these models as the basis of a tool which allows someone to predict cases of dengue fever based on the environment. The environmental conditions are thought to contribute to patterns in dengue fever outbreaks because environmental conditions effect mating and survival of mosquitoes, which are vectors for dengue fever. We have shown that just a few metrics of environmental conditions is sufficient to give a rough indication of the expected out breaks in San Juan, Puerto Rico and Iquitos,Peru. By using different training data it would be possible to develop models for any area of interest. This could be useful in prioritizing which areas receive assistance in possible large scale outbreaks. This model is limited by considering only the past environmental situation. [It is has been proposed](http://www.sciencedirect.com/science/article/pii/S0013935116303127) that in the future  current patterns of outbreaks will be disrupted, as climate change effects regular weather patterns and urbanization disturbs mosquito habitat (standing water where mosquitoes can lay eggs). The burden of dengue fever has been estimated to have increased 30-fold in 50 years, and the increase is expected to continue if there is no intervention.  
+The best predictive models for cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú were found using current climate data (weather and vegetative) and weather data from previous weeks (lagged data) as explanatory variables in a random forest model. We were able to use these models as the basis of a tool which allows someone to predict cases of dengue fever based on the environment. The environmental conditions are thought to contribute to patterns in dengue fever outbreaks because environmental conditions effect mating and survival of mosquitoes, which are vectors for dengue fever. We have shown that just a few metrics of environmental conditions is sufficient to give a rough indication of the expected out breaks in San Juan, Puerto Rico and Iquitos, Perú. By using different training data it would be possible to develop models for any area of interest. This could be useful in prioritizing which areas receive assistance in possible large scale outbreaks. This model is limited by considering only the past environmental situation, and only the years 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). [It is has been proposed](http://www.sciencedirect.com/science/article/pii/S0013935116303127) that in the future  current patterns of outbreaks will be disrupted, as climate change effects regular weather patterns and urbanization disturbs mosquito habitat (standing water where mosquitoes can lay eggs). The burden of dengue fever has been estimated to have increased 30-fold in 50 years, and the increase is expected to continue if there is no intervention. 
+
+# Future Areas of Work
+
