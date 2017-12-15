@@ -243,6 +243,25 @@ sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofye
 
 # Model Evaluation
 
+For each site, we construct and assess three versions of the random forest model: 
+
+1) Time Series Random Forest
+    • "current" environmental factors as predictors
+    • environmental time lags as predictors
+    • year and week as predictors
+    
+2) Simple Environmental-Only Random Forest
+    • "current" environmental factors as predictors
+    • no time lags
+    • year and week not included as predictors
+    
+3) Environmental Data with Time Lags Random Forest
+    • "current" environmental factors as predictors
+    • environmental time lags as predictors
+    • year and week not included as predictors
+
+## More on the Time Series Random Forest
+
 Michael J. Kane et. al compared a time series Random Forest model and an ARIMA model to predict avian influenza H5N1 cases, detailed in their [paper](https://link.springer.com/article/10.1186/1471-2105-15-276). They found that a Random Forest time series model with time lag variables out-performed the prospective ARIMA model in predicting H5N1 cases per week in Egypt.
 
 To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
