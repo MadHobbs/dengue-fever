@@ -281,7 +281,7 @@ In the end, we get n - 30 predictions for dengue cases in a week (we ge predicti
 
 ## Measuring Error
 
-We look at mean absolute error (MAE), root mean squared error (RMSE), and Normalized RMSE (NRMSE) to compare actual and predicted values. Although MAE will the the measrue used by the DrivenData team to assess our model, NRMSE is perhaps the most useful value to us. NRMSE is root mean squared error divided by the standard deviation of the observations (see the [nrmse function](https://www.rdocumentation.org/packages/hydroGOF/versions/0.3-10/topics/nrmse)). Normalizing RMSE in this way helps us compare error across different models or data sets with different scales. We have two data sets with different scales (San Juan experienced many more dengue cases than Iquitos), so NRMSE will be useful to us. 
+We look at mean absolute error (MAE), root mean squared error (RMSE), and Normalized RMSE (NRMSE) to compare actual and predicted values. Although MAE will the the measrue used by the DrivenData team to assess our model, NRMSE is perhaps the most useful value to us. NRMSE is root mean squared error as a percentage of the standard deviation of the observations and thus ranges from 0 to 100 (see the [nrmse function](https://www.rdocumentation.org/packages/hydroGOF/versions/0.3-10/topics/nrmse)). Normalizing RMSE in this way helps us compare error across different models or data sets with different scales. We have two data sets with different scales (San Juan experienced many more dengue cases than Iquitos), so NRMSE will be useful to us. 
 
 ```{r errorRateFunctions}
 # returns Mean Absolute Error
@@ -303,7 +303,7 @@ RMSE <- function(error)
 
 ## San Juan
 
-### Testing with current environemntal data, lagged environmental data, and date information
+### 1. Time Series Random Forest
 
 ```{r buildWallSJ, include=F}
 step <- 30
