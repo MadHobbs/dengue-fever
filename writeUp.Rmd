@@ -485,9 +485,9 @@ The RMSE of the model with current environmental data, lagged weather data, and 
 RMSE(iq_ts_predicted - actual)
 ```
 
-The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos is 88.7.
+The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos is:
 
-```{r, include=FALSE}
+```{r}
 nrmse(iq_ts_predicted, actual)
 ```
 

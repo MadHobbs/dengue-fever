@@ -76,7 +76,7 @@ ui <- dashboardPage(
               h3("San Juan, Puerto Rico and Iquitos, Ecuador"),
               dataTableOutput("our_sj_table"),
               img(src="dengue.jpg", width = 500),
-              h4("We present a two random forest models trained separately on weekly dengue fever cases  
+              h4("We present two random forest models trained separately on weekly dengue fever cases  
                  and environmental predictors for San Juan, Puerto Rico and Iquitos, Perú. The
                  data comes from NOAA's Dengue Fever Prediction page (sourced through Driven Data) and
                  contain data from 1990 to 2008 (San Juan) and 2000 to 2010 (Iquitos). 

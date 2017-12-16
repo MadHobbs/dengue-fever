@@ -21,7 +21,7 @@ set_api_key("a483d97cf372d5c9")
 
 testDate <- "20150101"
 
-SJlocation <- set_location(airport_code = "TJSJ")
+SJlocation <- set_location(airport_code = "TJSJ") 
 geolookup(SJlocation)
 
 dayData <- history_daily(location = SJlocation, date = testDate, use_metric = T)
