@@ -1,3 +1,6 @@
+
+# Note : The write up has LINKS. Use the HTML because they will be more visible there!
+
 Project Proposal
 
 Group Members: Madison Hobbs and Jennifer Havens
