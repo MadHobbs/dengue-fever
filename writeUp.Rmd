@@ -1,5 +1,5 @@
 ---
-title: Predicting cases of dengue feaver based on evnivornemtnal data using a random
+title: Predicting cases of dengue fever based on environmental data using a random
   forest model
 author: "Madison Hobbs and Jenn Havens"
 output:
@@ -99,7 +99,7 @@ corr_pmat
 all(corr_pmat < 0.05)
 ```
 
-In fact, all pairwise correlations between the four measures of temperature are significant, particulary between the average temperature and the other measurements. We can see the strong correlations represented in the correlation plot below:
+In fact, all pairwise correlations between the four measures of temperature are significant, particularly between the average temperature and the other measurements. We can see the strong correlations represented in the correlation plot below:
 
 ```{r tempCorPlot}
 corrplot(corr_matrix, method = "color")
@@ -274,7 +274,7 @@ Michael J. Kane et. al compared a time series Random Forest model and an ARIMA m
 
 To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
 
-Using the same method, we constructed a time series random forest model, using time as a predictor and included the time lags created above. We use only 100 trees per forest, because runtime is otherwise a nightmare. We assessed our model as they did: 
+Using the same method, we constructed a time series random forest model, using time as a predictor and included the time lags created above. We use only 100 trees per forest, because run-time is otherwise a nightmare. We assessed our model as they did: 
 
 1) Start by building a model on the first 30 weeks of data
 2) Use the model just built to predict the 31st week of data
@@ -446,7 +446,7 @@ sj_preds <- sj_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(sj_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("San Juan: Actual vs. Predicted - Climate Variables with Lags") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used currentclimate conditions, past weather conditions, and the time of year. However this model has the lowest RMSE and NRMSE, and the variables used all have scientifically hypothesized causality to outbreaks, so this is the model that we can use for predicting cases in San Juan.
+Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. However this model has the lowest RMSE and NRMSE, and the variables used all have scientifically hypothesized causality to outbreaks, so this is the model that we can use for predicting cases in San Juan.
 
 ## Iquitos
 
@@ -589,7 +589,7 @@ iq_preds <- iq_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_
 ggplot(iq_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos: Actual vs. Predicted - Climate Variables with Lags") + xlab("Week") + ylab("Number of dengue cases in the week")
 ```
 
-Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. However this model yields the best RMSE and NRMSE, and the variables used all are scientifically hypothesized to have causalilty for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
+Comparing predicted to actual cases in a subset of the weeks, with the model using current climate conditions and lagged weather conditions, we see similar patterns in the prediction to the model which used current climate conditions, past weather conditions, and the time of year. However this model yields the best RMSE and NRMSE, and the variables used all are scientifically hypothesized to have causality for outbreaks, so this is the model that we can use for predicting cases in Iquitos.
 
 # App and user prediction
 
