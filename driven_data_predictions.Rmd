@@ -1,0 +1,124 @@
+---
+title: "Predictions for Driven Data"
+authors: "Madison Hobbs and Jenn Havens"
+date: "12/13/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+TestPred <- read.csv("./DengAI_Predicting_Disease_Spread_-_Test_Data_Features.csv")
+
+load(file = "sj_model.rda",.GlobalEnv)
+load(file = "iq_model.rda",.GlobalEnv)
+```
+
+We use our models for each city to predict the number of dengue cases in the data sets for which Driven Data wants predictions.
+
+# Missing Values
+
+First, we impute missing values using Imputation via Bagging (the same way we dealt with missing values in the training set).
+
+```{r}
+set.seed(6)
+impTest <- preProcess(TestPred, "bagImpute")
+test_noNA <- predict(impTest, TestPred)
+```
+
+# Create Time Lagged Variables
+
+As in our training data, we generate time lagged weather variables from the data given.
+
+```{r makeTimeLags}
+lag_num_weeks = 12
+
+#make on col which gives year and week of year info
+tempData <- mutate(test_noNA, year_week_temp = paste(as.character(year), "_", as.character(weekofyear), sep="")) %>% mutate(lag_year_week_temp = paste(year(as.Date(week_start_date)-weeks(lag_num_weeks)), "_", week(as.Date(week_start_date)-weeks(lag_num_weeks)), sep=""))
+
+#make year_week and lag_year_week of yyyy_ww format
+tempData <- mutate(tempData, year_week = ifelse(nchar(year_week_temp) == 7, year_week_temp, sub("_", "_0", year_week_temp))) %>% mutate(lag_year_week = ifelse(nchar(lag_year_week_temp) == 7, lag_year_week_temp, sub("_", "_0", lag_year_week_temp)))
+
+tempDataIQ <- filter(tempData, city == "iq")
+tempDataSJ <- filter(tempData, city == "sj")
+
+### San Juan Data for Model
+#want lag for: precipitation_amt_mm and station_avg_temp_c for SJ
+lag_week_temp <- c()
+lag_week_precip <- c()
+lag_week_humid <- c()
+for (i in 1:length(tempDataSJ$lag_year_week)){
+  if (sum(grepl(tempDataSJ$lag_year_week[i], tempDataSJ$year_week)) == 1){
+    #find correct index for lag data and add that data to vectors
+    lagWeeki <- grep(tempDataSJ$lag_year_week[i], tempDataSJ$year_week)
+    lag_week_temp <- c(lag_week_temp, tempDataSJ$station_avg_temp_c[lagWeeki])
+    lag_week_precip <- c(lag_week_precip, tempDataSJ$precipitation_amt_mm[lagWeeki])
+    lag_week_humid <- c(lag_week_humid, tempDataSJ$reanalysis_relative_humidity_percent[lagWeeki])
+  }else {
+    lag_week_temp <- c(lag_week_temp, NA)
+    lag_week_precip <- c(lag_week_precip, NA)
+    lag_week_humid <- c(lag_week_humid, NA)
+  }
+}           
+
+tempDataSJ$temp_lag <- lag_week_temp
+tempDataSJ$precip_lag <- lag_week_precip
+tempDataSJ$humidity_lag <- lag_week_humid 
+
+# select only the predictors we want for the model
+sj_data_for_model <- select(tempDataSJ, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent, humidity_lag)
+
+
+### Iquitos Data for Model
+#want lag for: precipitation_amt_mm and station_avg_temp_c for IQ
+lag_week_temp <- c()
+lag_week_precip <- c()
+lag_week_humid <- c()
+for (i in 1:length(tempDataIQ$lag_year_week)){
+  if (sum(grepl(tempDataIQ$lag_year_week[i], tempDataIQ$year_week)) == 1){
+    #find correct index for lag data and add that data to vectors
+    lagWeeki <- grep(tempDataIQ$lag_year_week[i], tempDataIQ$year_week)
+    lag_week_temp <- c(lag_week_temp, tempDataIQ$station_avg_temp_c[lagWeeki])
+    lag_week_precip <- c(lag_week_precip, tempDataIQ$precipitation_amt_mm[lagWeeki])
+    lag_week_humid <- c(lag_week_humid, tempDataIQ$reanalysis_relative_humidity_percent[lagWeeki])
+  }else {
+    lag_week_temp <- c(lag_week_temp, NA)
+    lag_week_precip <- c(lag_week_precip, NA)
+    lag_week_humid <- c(lag_week_humid, NA)
+  }
+}           
+
+tempDataIQ$temp_lag <- as.numeric(lag_week_temp)
+tempDataIQ$precip_lag <- as.numeric(lag_week_precip)
+tempDataIQ$humidity_lag <- as.numeric(lag_week_humid)
+
+# select only the predictors we want for the model
+iq_data_for_model <- select(tempDataIQ, year, weekofyear, ndvi_ne, ndvi_nw, ndvi_se, ndvi_sw, precipitation_amt_mm, precip_lag, station_avg_temp_c, temp_lag, reanalysis_relative_humidity_percent, humidity_lag)
+
+iq_data_for_model <- filter(iq_data_for_model, humidity_lag != "NA")
+sj_data_for_model <- filter(sj_data_for_model, humidity_lag != "NA")
+
+# get good names for columns
+
+iq_data_for_model <- iq_data_for_model %>% dplyr::rename(week_of_year = weekofyear) %>% dplyr::rename(relative_humidity_percent = reanalysis_relative_humidity_percent)
+
+sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofyear, relative_humidity_percent = reanalysis_relative_humidity_percent)
+```
+
+# Generate Predictions
+
+We generate predictions and write them to csv in the format desired by Driven Data.
+
+```{r}
+sj_predicts <- predict(sj_model, sj_data_for_model)
+iq_predicts <- predict(iq_model, iq_data_for_model)
+
+sj_data_for_model <- sj_data_for_model %>% mutate(predicted_num_cases = sj_predicts)
+iq_data_for_model <- iq_data_for_model %>% mutate(predicted_num_cases = iq_predicts)
+
+sj_driven_data_predictions <- write.csv(select(sj_data_for_model, year, week_of_year, predicted_num_cases), "sj_driven_data_predictions")
+iq_driven_data_predictions <- write.csv(select(iq_data_for_model, year, week_of_year, predicted_num_cases), "iq_driven_data_predictions")
+```
+

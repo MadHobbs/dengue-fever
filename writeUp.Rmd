@@ -248,13 +248,19 @@ sj_data_for_model <- sj_data_for_model %>% dplyr::rename(week_of_year = weekofye
 For each site, we construct and assess three versions of the random forest model:
 
 1) Random Forest with Current Environmental Data, Lagged Weather Data, and Date Information
+
     • "current" environmental factors as predictors
+    
     • weather time lags as predictors
+    
     • year and week as predictors
     
 2) Random Forest with Current Climate Variables Only
+
     • "current" environmental factors as predictors
+    
     • no time lags
+    
     • year and week not included as predictors
     
 3) Random Forest with Current Climate Variables with Lagged Weather Data
@@ -277,6 +283,7 @@ Using the same method, we constructed a time series random forest model, using t
 5) Use the model just build to predict the 32nd week of data 
 6) Write down that prediction for the number of dengue cases in week 32
 7) Now train a random forest on the firs 32 weeks of data ...
+
 ... and so on until there are no weeks left to predict!
 
 In the end, we get n - 30 independent predictions for dengue cases in a week (we get predictions for all but the first 30 observations in the training set). We compare these predictions to the actual number of dengue cases and calculate error.
@@ -456,40 +463,42 @@ while(index_to_predict <= length(iq_data_for_model$total_cases)) {
   # use previous "step" number of weeks to build model
   data <- slice(iq_data_for_model, 1:(index_to_predict-1))
   
-  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 500, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
+  model <- train(total_cases ~ ., data = data, method = "rf", trControl =  trainControl(method = "oob"), ntree = 100, tuneGrid = data.frame(mtry = 1:12), importance = TRUE)
   
   # predict on single observation:  the next week, the index_to_predict
   predicted_num_cases <- predict(model, slice(iq_data_for_model, index_to_predict))
   
-  predictions <- c(iq_ts_predictions, predicted_num_cases)
+  iq_ts_predictions <- c(iq_ts_predictions, predicted_num_cases)
   
   index_to_predict = index_to_predict + 1
 }
 
 actual <- iq_data_for_model$total_cases[31:length(iq_data_for_model$total_cases)]
-iq_ts_predicted <- predictions[31:length(iq_ts_predictions)]
+iq_ts_predicted <- iq_ts_predictions[31:length(iq_ts_predictions)]
 
 RMSE(iq_ts_predicted - actual)
-MAE(iq_ts_predicted - actual)
 ```
 
 The RMSE of the model with current environmental data, lagged weather data, and date information for modeling cases in Iquitos is:
 
 ```{r}
-RMSE(iq_ts_predictions - test$total_cases)
+RMSE(iq_ts_predicted - actual)
 ```
 
-The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos is:
+The normalized Root-Mean Square Error of the model with current environmental data, lagged environmental data, and date information for modeling cases in Iquitos is 88.7.
 
-```{r}
+```{r, include=FALSE}
 nrmse(iq_ts_predicted, actual)
 ```
 
 Again, we see a relatively high error rate the random forest with date information. We can visualize how the predicted number of cases matches with the actual number of cases. 
 
 ```{r testWallIQ}
-iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)], iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)], actual, iq_ts_predicted)
+iq_prospective_preds <- data.frame(iq_data_for_model$year[31:length(iq_data_for_model$total_cases)],
+                          iq_data_for_model$week_of_year[31:length(iq_data_for_model$total_cases)],
+                          actual, iq_ts_predicted)
 colnames(iq_prospective_preds) = c("year", "week_of_year", "actual", "predicted")
+
 iq_prospective_preds <- iq_prospective_preds %>% mutate(week_index = row_number()) %>% gather(actual_or_predicted, dengue_cases_in_week, -year, -week_of_year, -week_index)
 
 ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col = actual_or_predicted)) + geom_line() + ggtitle("Iquitos : Actual vs. Predicted Weekly Dengue Cases") + xlab("Week") + ylab("Number of dengue cases in the week")
