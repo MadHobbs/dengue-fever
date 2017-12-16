@@ -264,8 +264,11 @@ For each site, we construct and assess three versions of the random forest model
     • year and week not included as predictors
     
 3) Random Forest with Current Climate Variables with Lagged Weather Data
+
     • "current" environmental factors as predictors
+    
     • weather time lags as predictors
+    
     • year and week not included as predictors
 
 ## More on the Time Series Random Forest
