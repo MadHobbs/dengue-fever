@@ -356,7 +356,7 @@ ggplot(sj_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 
 Based on this we can see that the model has good predictive ability on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases, while sometimes the model predicted outbreaks much larger than observed. However, the model was able to predict timing of outbreaks well.
 
-### 2. Random Forest With Current Climate Varibles Only
+### 2. Random Forest With Current Climate Variables Only
 
 ```{r buildWcurentEnviroSJ, include=F}
 set.seed(44)
@@ -506,7 +506,7 @@ ggplot(iq_prospective_preds, aes(x = week_index, y = dengue_cases_in_week, col =
 
 Based on this, we can see that the model has some good predictive ability, on the included data. In some outbreaks the absolute count predicted by the model was less than the true number of cases. However, the model was able to predict timing of outbreaks well, and relative size of the outbreaks. 
 
-### 2. Random Forest With Environmental Varibles Only 
+### 2. Random Forest With Environmental Variables Only 
 
 ```{r buildWcurentEnviroIQ , include=F}
 set.seed(44)
