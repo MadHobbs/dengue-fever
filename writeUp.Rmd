@@ -1,6 +1,6 @@
 ---
 title: Predicting cases of dengue feaver based on evnivornemtnal data using a random
-  forest model.
+  forest model
 author: "Madison Hobbs and Jenn Havens"
 output:
   html_document: default
@@ -47,7 +47,7 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Understanding how environmental factors predict dengue fever rates can serve as an early warning system to help local authorities prepare for unusually high numbers of cases and inform them about which areas may need the most outside assistance. DrivenData is hosting a competition: [DengAI: Predicting Disease Spread](https://www.drivendata.org/competitions/44/dengai-predicting-disease-spread/), to predict cases of dengue fever in San Juan, Puerto Rico and Iquitos, Peru.The data comes from the [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov). 
 
-##The Model
+## Model Approach
 
 We created two (2) predictive models, one for each of the cities of interest: San Juan and Iquitos. Our model is a random forest which was trained on data from each city individually, producing one random forest for San Juan and one random forest for Iquitos. 
 
@@ -55,7 +55,7 @@ A random forest algorithm builds up many bagged and decorrelated decision trees 
 
 The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (NDVI). We also considered time as a possible variable, constructing a time-series random forest. The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see "variable_descriptions.pdf" on our github.
 
-## Missing Values:
+## Missing Values
 
 First, we ask how many values in our data are NA?
 
@@ -274,7 +274,7 @@ Michael J. Kane et. al compared a time series Random Forest model and an ARIMA m
 
 To assess their model, Kane et. al built a Random Forest model on 30 weeks, then used that model to predict the next week. The simulation steps forward week by iteratively adding the next week of data, building a new model, and predicting the number of cases in the following week. 
 
-Using the same method, we constructed a time series random forest model, using time as a predictor and included the time lags created above. We assessed our model as they did: 
+Using the same method, we constructed a time series random forest model, using time as a predictor and included the time lags created above. We use only 100 trees per forest, because runtime is otherwise a nightmare. We assessed our model as they did: 
 
 1) Start by building a model on the first 30 weeks of data
 2) Use the model just built to predict the 31st week of data
@@ -608,6 +608,4 @@ We used simple test and training to assess the two models without time variables
 
 We also could have played around with the length of the time lags. 2-3 months was the suggested length according to literature we read (as mentioned above), so we chose 12 weeks. However, we could approach the length of time lag as a tuning parameter and select the time lag for each climate variable which generates the most accurate predictions.
 
-As mentioned above, the data we used to build and assess our models represents a fraction of the available data on the web. A good follow-up would be to compile all dengue fever and climate data available, or at least the most recent data (post-2010) to build more informed models for San Juan and Iquitos. And build models for other areas of interst.
-
-
+As mentioned above, the data we used to build and assess our models represents a fraction of the available data on the web. A good follow-up would be to compile all dengue fever and climate data available, or at least the most recent data (post-2010) to build more informed models for San Juan and Iquitos. It would also be useful to build models for other areas affected by dengue fever.
