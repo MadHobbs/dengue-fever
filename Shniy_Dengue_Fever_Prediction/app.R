@@ -117,8 +117,8 @@ ui <- dashboardPage(
               sidebarLayout(
                 
                 sidebarPanel(
-                  checkboxGroupInput("which_city", label = h3("Which City?"), 
-                                     choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Ecuador: Entered Date" = "iq2" ), 
+                  checkboxGroupInput("which_city", label = h3("Choose One:"), 
+                                     choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Perú: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Perú: Entered Date" = "iq2" ), 
                                      selected = "sj"),
                   numericInput(inputId = "now", 
                                label = "Date of preditction (YYYYMMDD)", 
