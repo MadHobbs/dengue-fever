@@ -12,14 +12,20 @@
 
 library(shiny)
 library(shinydashboard)
-library(caret)
 library(lubridate)
-#library(tidyverse)
-#library(mnormt)
 library(dplyr)
+library(ggplot2)
 library(rwunderground)
 library(httr)
+require(stats)
+library(stats)
 library(curl)
+library(randomForest)
+library(caret)
+
+#library(tidyverse)
+#library(mnormt)
+
 #library(XML)
 #library(gridExtra)
 #library(rappdirs)
@@ -57,7 +63,7 @@ computerToday <- format(Sys.Date(), "%Y%m%d")
 ui <- dashboardPage(
   
   dashboardHeader(title = "Predicting Dengue"),
-
+  
   ## Sidebar content
   dashboardSidebar(
     sidebarMenu(
@@ -68,7 +74,7 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
-
+    
     tabItems(
       # First tab content
       tabItem(tabName = "our_model",
@@ -91,16 +97,16 @@ ui <- dashboardPage(
                 img(src="Iquitos.png", width = 400),
                 img(src="SanJuan.png", align= "right", width = 400)
               )
-      ),
+              ),
       # Second tab content
       tabItem(tabName = "input_one_observation",
               
               h2("Input Predictors"),
               h4("Select one city at a time with the check boxes."),              
               h4("You must enter a value for all variables if you choose to manually enter data. To find current Normalized Difference Vegetation
-                  Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
+                 Index (NDVI), vist NOAA (https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index)."),
               h4("If you choose the 'Entered Date' option, weather data will be collected from 
-                  WeatherUnderground (https://www.wunderground.com/). 
+                 WeatherUnderground (https://www.wunderground.com/). 
                  and the NDVI used will be the average from the training data"),
               h4("Input as many rows as you like. 
                  Each row will get passed into our random forest model 
@@ -111,83 +117,84 @@ ui <- dashboardPage(
               sidebarLayout(
                 
                 sidebarPanel(
-                checkboxGroupInput("which_city", label = h3("Which City?"), 
+                  checkboxGroupInput("which_city", label = h3("Which City?"), 
                                      choices = list("San Juan, Puerto Rico: Manual" = "sj", "Iquitos, Ecuador: Manual" = "iq", "San Juan, Puerto Rico: Entered Date" = "sj2", "Iquitos, Ecuador: Entered Date" = "iq2" ), 
                                      selected = "sj"),
-                numericInput(inputId = "now", 
-                             label = "Date of preditction (YYYYMMDD)", 
-                             value = computerToday, min = 0),
-                numericInput(inputId = "precipitation_amt_mm", 
-                             label = "Week's Total Precipitation (mm)", 
-                             value = 0, min = 0), 
-                numericInput(inputId = "precip_lag", 
-                             label = "12 Weeks Ago Total Precipitation (mm)", 
-                             value = 0, min = 0), 
-                numericInput(inputId = "station_avg_temp_c", 
-                                     label = "Week's Average Temperature (degrees C)", 
-                                     value = 0),
-                numericInput(inputId = "temp_lag", 
-                             label = "12 Weeks Ago Average Temperature (degrees C)", 
-                             value = 0),
-                numericInput(inputId = "relative_humidity_percent", 
-                             label = "Week's Average Relative Humidity Percent", 
-                             value = 0, min = 0, max = 100), 
-                numericInput(inputId = "humidity_lag", 
-                             label = "12 Weeks Ago Average Relative Humidity Percent", 
-                             value = 0, min = 0, max = 100), 
-                numericInput(inputId = "ndvi_ne", 
-                             label = "NDVI NE", 
-                             value = 0, min = -1, max = 1),
-                numericInput(inputId = "ndvi_nw", 
-                             label = "NDVI NW", 
-                             value = 0, min = -1, max = 1),
-                numericInput(inputId = "ndvi_se", 
-                             label = "NDVI SE", 
-                             value = 0, min = -1, max = 1),
-                numericInput(inputId = "ndvi_sw", 
-                             label = "NDVI SW", 
-                             value = 0, min = -1, max = 1),
-
-                hr(),
-                actionButton("addrow", "Add Row"),
-                actionButton("revrow", "Remove Row")
+                  numericInput(inputId = "now", 
+                               label = "Date of preditction (YYYYMMDD)", 
+                               value = computerToday, min = 0),
+                  numericInput(inputId = "precipitation_amt_mm", 
+                               label = "Week's Total Precipitation (mm)", 
+                               value = 0, min = 0), 
+                  numericInput(inputId = "precip_lag", 
+                               label = "12 Weeks Ago Total Precipitation (mm)", 
+                               value = 0, min = 0), 
+                  numericInput(inputId = "station_avg_temp_c", 
+                               label = "Week's Average Temperature (degrees C)", 
+                               value = 0),
+                  numericInput(inputId = "temp_lag", 
+                               label = "12 Weeks Ago Average Temperature (degrees C)", 
+                               value = 0),
+                  numericInput(inputId = "relative_humidity_percent", 
+                               label = "Week's Average Relative Humidity Percent", 
+                               value = 0, min = 0, max = 100), 
+                  numericInput(inputId = "humidity_lag", 
+                               label = "12 Weeks Ago Average Relative Humidity Percent", 
+                               value = 0, min = 0, max = 100), 
+                  numericInput(inputId = "ndvi_ne", 
+                               label = "NDVI NE", 
+                               value = 0, min = -1, max = 1),
+                  numericInput(inputId = "ndvi_nw", 
+                               label = "NDVI NW", 
+                               value = 0, min = -1, max = 1),
+                  numericInput(inputId = "ndvi_se", 
+                               label = "NDVI SE", 
+                               value = 0, min = -1, max = 1),
+                  numericInput(inputId = "ndvi_sw", 
+                               label = "NDVI SW", 
+                               value = 0, min = -1, max = 1),
+                  
+                  hr(),
+                  actionButton("addrow", "Add Row"),
+                  actionButton("revrow", "Remove Row")
+                  
+                ), 
+                mainPanel(
+                  h1("Predictions"),
+                  hr(),
+                  hr(),
+                  dataTableOutput("predictions")
+                )
+              )
               
-              ), 
-              mainPanel(
-                h1("Predictions"),
-                hr(),
-                hr(),
-                dataTableOutput("predictions")
               )
               )
-              
       )
-    )
   )
-)
 
 server <- function(input, output, session) {
   
   pred_values <- reactiveValues()
   
   pred_values$DT <- data.frame(predicted_num_cases = NA,
-    which_city =  NA,
-    precipitation_amt_mm =  NA,
-    precip_lag =  NA,
-    station_avg_temp_c =  NA,
-    temp_lag =  NA,
-    relative_humidity_percent =  NA,
-    humidity_lag =  NA,
-    ndvi_ne =  NA,
-    ndvi_nw =  NA,
-    ndvi_se =  NA,
-    ndvi_sw =  NA,
-    stringsAsFactors = FALSE)
+                               which_city =  NA,
+                               precipitation_amt_mm =  NA,
+                               precip_lag =  NA,
+                               station_avg_temp_c =  NA,
+                               temp_lag =  NA,
+                               relative_humidity_percent =  NA,
+                               humidity_lag =  NA,
+                               ndvi_ne =  NA,
+                               ndvi_nw =  NA,
+                               ndvi_se =  NA,
+                               ndvi_sw =  NA,
+                               stringsAsFactors = FALSE)
   
-
+  output$predictions <- renderDataTable({pred_values$DT}, options = list(scrollX = TRUE))
+  
   
   newEntry <- observeEvent(input$addrow, {
-    preds <- c
+    preds <- c()
     if(input$which_city == "sj" | input$which_city == "iq") {
       
       newLine <- data.frame(
@@ -202,7 +209,6 @@ server <- function(input, output, session) {
         ndvi_se = input$ndvi_se,
         ndvi_sw = input$ndvi_sw)
     }
-    
     else if(input$which_city == "sj2") {
       todayDate <-input$now
       startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-days(5), "%Y%m%d")
@@ -242,7 +248,7 @@ server <- function(input, output, session) {
       startWeek <- format(as.Date(as.character(todayDate), format="%Y%m%d")-days(5), "%Y%m%d")
       lagDate <- format(as.Date(as.character(todayDate), format="%Y%m%d")-weeks(lag_num_weeks), "%Y%m%d")
       startWeekLag <- format(as.Date(lagDate, format="%Y%m%d")-days(5), "%Y%m%d")
-
+      
       IQlocation <- set_location(airport_code = "IQT")
       
       dayDataIQ <- history_range(location = IQlocation, startWeek, as.character(todayDate), use_metric = T)
@@ -271,31 +277,30 @@ server <- function(input, output, session) {
         ndvi_se = IQ_se,
         ndvi_sw = IQ_sw)
     }
-
     
     if(input$which_city == "sj") {
-      newPredLine <- c(predict(sj_model, newLine), input$which_city, 
-                       input$precipitation_amt_mm, 
+      newPredLine <- c(as.numeric(stats::predict(sj_model, newLine)[1]), input$which_city,
+                       input$precipitation_amt_mm,
                        input$precip_lag, input$station_avg_temp_c,
                        input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
                        input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
-    } 
+    }
     else if (input$which_city == "iq") {
-      newPredLine <- c(predict(iq_model, newLine), input$which_city, 
+      newPredLine <- c(as.numeric(stats::predict(iq_model, newLine)[1]), input$which_city, 
                        input$precipitation_amt_mm, 
                        input$precip_lag, input$station_avg_temp_c,
                        input$temp_lag, input$relative_humidity_percent, input$humidity_lag,
                        input$ndvi_ne, input$ndvi_nw, input$ndvi_se, input$ndvi_sw)
     }
     else if (input$which_city == "iq2"){
-      newPredLine <- c(predict(iq_model, newLine), "iq", 
+      newPredLine <- c(as.numeric(stats::predict(iq_model, newLine)[1]), "iq", 
                        dayPrecipIQ, 
                        precipLagIQ, dayTempIQ,
                        tempLagIQ, dayHumidIQ, humidLagIQ,
                        IQ_ne, IQ_nw, IQ_se, IQ_sw)
     }
     else if (input$which_city == "sj2"){
-      newPredLine <- c(predict(sj_model, newLine), "sj", 
+      newPredLine <- c(as.numeric(stats::predict(sj_model, newLine)[1]), "sj", 
                        dayPrecipSJ, 
                        precipLagSJ, dayTempSJ,
                        tempLagSJ, dayHumidSJ, humidLagSJ,
@@ -305,7 +310,7 @@ server <- function(input, output, session) {
       newPredLine <- c()
     }
     
-    pred_values$DT <- rbind(pred_values$DT, newPredLine)
+    pred_values$DT <- isolate(rbind(pred_values$DT, newPredLine))
   })
   
   newEntry <- observeEvent(input$revrow, {
@@ -313,7 +318,7 @@ server <- function(input, output, session) {
     pred_values$DT <- deleteLine
   })
   
-  output$predictions <- renderDataTable({pred_values$DT}, options = list(scrollX = TRUE))
+  
 }
 
 shinyApp(ui = ui, server = server)
