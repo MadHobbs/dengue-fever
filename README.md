@@ -11,7 +11,6 @@ both ~ Facilitators
 Dengue Fever is a life-threatening mosquito-borne illness that affects many people worldwide, particularly in South America and Southeast Asia. We wish to build a model to predict dengue fever cases based on changes in environmental conditions such as precipitation, vegetation, temperature, and more. How do different variables contribute to dengue fever prediction, which are the most significant, and do these factors and their predictive importance vary from location to location? Long term goals would be to be able to prepare communities in threatening circumstances. 
 
 We are accessing our data on drivendata.org, a data competition site. All files are given in .csv format. The data is collected by the CDC, NOAA, and U.S. Department of Commerce. The data is in tidy format.
-Variables: List, and briefly describe, each variable that you plan to incorporate. If you can, be specific about units, scale, etc.
 
 Part of our analysis is determining which variables to include. The total range of variables we have to choose from are:
 	
