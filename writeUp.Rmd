@@ -45,15 +45,17 @@ TrainFull <- full_join(TrainResp, TrainPred, by = c("city", "year", "weekofyear"
 
 #Introduction
 
-Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Understanding how environmental factors predict dengue fever rates can serve as an early warning system to help local authorities prepare for unusually high numbers of cases and inform them about which areas may need the most outside assistance. DrivenData is hosting a competition: [DengAI: Predicting Disease Spread](https://www.drivendata.org/competitions/44/dengai-predicting-disease-spread/), to predict cases of dengue fever in San Juan, Puerto Rico and Iquitos, Peru.The data comes from the [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov). 
+Cases of dengue fever are related to the [current](http://journals.plos.org/plosntds/article?id=10.1371/journal.pntd.0001648) and [past](http://www.sciencedirect.com/science/article/pii/S0001706X07001271) climate. Environmental data can be used for predicting patterns in rates of dengue fever. Understanding how environmental factors predict dengue fever rates can serve as an early warning system to help local authorities prepare for unusually high numbers of cases and inform them about which areas may need the most outside assistance. DrivenData is hosting a competition: [DengAI: Predicting Disease Spread](https://www.drivendata.org/competitions/44/dengai-predicting-disease-spread/), to predict cases of dengue fever in San Juan, Puerto Rico and Iquitos, Perú. The data comes from the [NOAA Dengue Forecasting project](http://dengueforecasting.noaa.gov). 
 
 ## Model Approach
 
-We created two (2) predictive models, one for each of the cities of interest: San Juan and Iquitos. Our model is a random forest which was trained on data from each city individually, producing one random forest for San Juan and one random forest for Iquitos. 
+We created two predictive models, one for each of the cities of interest: San Juan and Iquitos. Our model is a random forest which was trained on data from each city individually, producing one random forest for San Juan and one random forest for Iquitos. 
 
 A random forest algorithm builds up many bagged and decorrelated decision trees which use explanatory variables to group the possible values of a response variable based on training data. To predict an observation with unknown response, we send that observation (and its explanatory variables) though all of those decision trees, get an answer from each one, then take the average of those answers to be our prediction.
 
-The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (NDVI). We also considered time as a possible variable, constructing a time-series random forest. The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see "variable_descriptions.pdf" on our github.
+The response that we are interested in is the number of dengue fever cases in a week. The explanatory variables in this model are different measures of environmental conditions including temperature, humidity, precipitation, and Normalized Difference Vegetation Index (NDVI). We also considered time as a possible variable and constructed a time-series random forest. 
+
+The environmental training data was collected from the [US National Oceanic and Atmospheric Administration (NOAA)](https://www.ncdc.noaa.gov/cdr/terrestrial/normalized-difference-vegetation-index) and the health data (cases of dengue fever reported) from the [US Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov/dengue/epidemiology/index.html). For more information, please see `variable_descriptions.pdf` on our github.
 
 ## Missing Values
 
@@ -64,7 +66,8 @@ First, we ask how many values in our data are NA?
 round(sum(is.na(TrainFull))/(dim(TrainFull)[1]*dim(TrainFull)[2]), 3)
 ```
 
-Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging (from the caret package). According to their [documentation](https://topepo.github.io/caret/pre-processing.html#impute): "Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost." Fortunately, it doesn't take too long for bagging to impute the relatively few missing values on our data.
+Only 1.5% of our data is missing. Because there are relatively few missing values, and because having missing weeks will complicate our time series analyses, we decide to impute missing values. We use imputation via bagging from the `caret`
+package. According to their [documentation](https://topepo.github.io/caret/pre-processing.html#impute): "Imputation via bagging fits a bagged tree model for each predictor (as a function of all the others). This method is simple, accurate and accepts missing values, but it has much higher computational cost." Fortunately, it doesn't take too long for bagging to impute the relatively few missing values on our data.
 
 ```{r bagToFillNAs}
 set.seed(6)
@@ -74,12 +77,12 @@ TrainFull_noNA <- predict(impTrainFull, TrainFull)
 
 # Variable Selection
 
-Some variables, like temperature and precipitation, are provided to us from multiple sources in the Driven Data dengue fever prediction data set. 
-Some data comes from [NOAA GHCN](https://www.ncdc.noaa.gov/data-access/land-based-station-data/land-based-datasets/global-historical-climatology-network-ghcn) station measurements in San Juan, Puerto Rico and Iquitos, Perú. See NOAA's "Environmental data sources for the Dengue Project" on our github for specific geographical coordinates of these stations.
+Some variables, like temperature and precipitation, are provided to us from multiple sources in the DrivenData dengue fever prediction data set. 
+Some data comes from [NOAA GHCN](https://www.ncdc.noaa.gov/data-access/land-based-station-data/land-based-datasets/global-historical-climatology-network-ghcn) station measurements in San Juan, Puerto Rico (lat: 18.4325, long: -66.0108) and Iquitos, Perú (-3.783, -73.3). 
 
 A second data source is [NOAA's CDR PERSIANN](https://www.ncdc.noaa.gov/cdr/atmospheric/precipitation-persiann-cdr) Precipitation Product which uses remote sensing (satellites) coupled with an artificial neural network to produce precipitation data for every 0.25 x 0.25 degree on Earth. 
 
-A third data source is the [Climate Forecast System Reanalysis (CFSR)](https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2) provides the "best estimate" for the state of the "atmosphere-ocean-land surface-sea ice system" over a given time period (according to NOAA via "Environmental data sources for the Dengue Project"). It is from this source that our humidity and dew point measurements come. 
+A third data source is the [Climate Forecast System Reanalysis (CFSR)](https://www.ncdc.noaa.gov/data-access/model-data/model-datasets/climate-forecast-system-version2-cfsv2) provides the "best estimate" for the state of the "atmosphere-ocean-land surface-sea ice system" over a given time period (according to [NOAA](http://dengueforecasting.noaa.gov/docs/Metadata.pdf)). This is the source of our humidity and dew point measurements. 
 
 ## Temperature
 
@@ -102,10 +105,14 @@ all(corr_pmat < 0.05)
 In fact, all pairwise correlations between the four measures of temperature are significant, particularly between the average temperature and the other measurements. We can see the strong correlations represented in the correlation plot below:
 
 ```{r tempCorPlot}
-corrplot(corr_matrix, method = "color")
+colnames(corr_matrix) <- c("Max Temp", "Avg Temp", "Min Temp", "Diurnal Temp Range")
+rownames(corr_matrix) <- c("Max Temp", "Avg Temp", "Min Temp", "Diurnal Temp Range")
+
+ggcorrplot(corr_matrix, hc.order = TRUE, type = "upper",
+     outline.col = "white", lab = TRUE, title = "Station-Measured Temperature Metric Correlations")
 ```
 
-Because multiple correlated variables are redundant and ill-advised to include in a random forest model, we decide to use only station-measured average temperature. The average captures the variability of the other temperature measures. Furthermore, [one past study](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant. Therefore, we will proceed with mean temperature as the only temperature variable.
+Because multiple variables which record the same thing are redundant and ill-advised to include in a model, we decide to use only station-measured average temperature. The average captures the variability of the other temperature measures. Furthermore, [one past study](https://bmcpublichealth.biomedcentral.com/track/pdf/10.1186/s12889-016-2923-2?site=http://bmcpublichealth.biomedcentral.com) found that mean temperature was significantly associated with dengue rates, but maximum temperature and minimum were not always significant. Therefore, we will proceed with mean temperature as the only temperature variable.
 
 ## Precipitation
 
@@ -114,7 +121,7 @@ Precipitation is measured as total precipitation in a week, given in three diffe
 Again, we should choose one of these precipitation measures for the model, since these four precipitation measures all measure approximately the same thing, as seen below. All pairwise correlations are found to be positive and significant. 
 
 ```{r, include=F}
-precips <- TrainFull_noNA %>% select(station_precip_mm, precipitation_amt_mm, reanalysis_sat_precip_amt_mm, reanalysis_precip_amt_kg_per_m2) 
+precips <- TrainFull_noNA %>% select(station_precip_mm, reanalysis_sat_precip_amt_mm, reanalysis_precip_amt_kg_per_m2) 
 
 corr_matrix <- cor(precips)
 corr_pmat <- cor_pmat(precips)
@@ -125,7 +132,11 @@ all(corr_pmat<0.05)
 ```
 
 ```{r}
-corrplot(corr_matrix, method = "color")
+colnames(corr_matrix) <- c("Station-Measured (mm)", "Satellite Reanalysis (mm)", "Satellite eanalysis (kg/m2)")
+rownames(corr_matrix) <- c("Station-Measured (mm)", "Satellite Reanalysis (mm)", "Satellite eanalysis (kg/m2)")
+
+ggcorrplot(corr_matrix, hc.order = TRUE, type = "upper",
+     outline.col = "white", lab = TRUE, title = "Precipitation Metric Correlations")
 ```
 
 According to the [NOAA Dengue Forecasting recommendations](http://dengueforecasting.noaa.gov), "remotely sensed observations are generally an excellent observation of precipitation and vegetation conditions for a location." We therefore decide to use the PERSIANN satellite-measured total precipitation for each city as the only precipitation variable in our model.
@@ -143,14 +154,12 @@ corr_pmat <- cor_pmat(humids)
 corr_pmat
 
 # they are all significantly correlated 
-#all(corr_pmat < 0.05)
-
+all(corr_pmat < 0.05)
 ```
 
 ```{r}
-#ggcorrplot(corr_matrix, hc.order = TRUE)
-corrplot(corr_matrix, method = "color")
-
+ggcorrplot(corr_matrix, hc.order = TRUE, type = "upper",
+     outline.col = "white", lab = TRUE, title = "Precipitation Metric Correlations")
 ```
 
 As before, since these measure roughly the same information, we opt to include only one in our model. Relative humidity is the measure most often used in literature we have read. It is also an easy-to-find measure, making our model more user-friendly. Therefore, we use only relative humidity in the model.
