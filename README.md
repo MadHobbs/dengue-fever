@@ -1,4 +1,4 @@
-#Predicting Dengue Fever Cases with Environmental Data
+# Predicting Dengue Fever Cases with Environmental Data
 
 Group Members: Madison Hobbs and Jennifer Havens                                                                           
 Madison ~ Project Manager 
