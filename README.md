@@ -4,7 +4,13 @@ This was a project I did in Fall 2017 for my Computational Statistics class with
 
 # Motivation
 
-Dengue Fever is a life-threatening mosquito-borne illness that affects many people worldwide, particularly in South America and Southeast Asia. We wish to build a model to predict dengue fever cases based on changes in environmental conditions such as precipitation, vegetation, temperature, and more. How do different variables contribute to dengue fever prediction, which are the most significant, and do these factors and their predictive importance vary from location to location? Long term goals would be to be able to prepare communities in threatening circumstances. 
+Dengue Fever is a life-threatening mosquito-borne illness that affects many people worldwide, particularly in South America and Southeast Asia. 
+
+Most work around predicting dengue fever outbreaks centers around using time series models without leveraging machine learning approaches. We wanted to see how well we could engineer random forest regression models to predict the number dengue fever cases in a week by using only environmental data. This would offer communities a simpler way to predict and prepare for outbreaks of the deadly disease simply by using readily available weather data, rather than having to rely on disease outbreak data which can take months or a year to compile. 
+
+# What We Did
+
+We built models (one for Iquitos, Perú and the other for San Juan, PR, USA) to predict dengue fever cases based on changes in environmental conditions such as precipitation, vegetation, temperature, and more. We ended up producing impressivley high-performing models (San Juan: RMSE = 27.5; Iquitos: RMSE = 3.87). 
 
 # Results
 
